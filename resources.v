@@ -127,6 +127,11 @@ Record Reference : Set := {
   mutability : Qualifier;
 }.
 
+Inductive is_mut : Reference → Prop :=
+  | is_mut_ref : ∀ (r : Root) (p : Path), is_mut {|
+    root := r; access_path := p; mutability := mut;
+  |}.
+
 Definition extend_ref (r : Reference) (e : FieldName) : Reference :=
   match r with
   | {| root := root ; access_path := access_path; mutability := mutability |} => {|
@@ -156,22 +161,44 @@ Coercion foo (v : UnrestrictedValue) := val (unrestrictiveValue v).
 (** * States  *)
 Definition LocalMemory : Set := LocalVariable ⇀ RuntimeValue.
 
-Definition GlobalMemory : Set := GlobalResourceID ⇀ Value.
+Module StructSig.
+Record StructSig := {
+  kind : Kind;
+  field: list (FieldName * NonReferenceType)
+}.
+End StructSig.
+Import StructSig(StructSig).
 
-Inductive LocalMemTo : LocalMemory → Reference → RuntimeValue → Prop :=.
+Record Module : Set := {
+  struct_decls : StructName ⇀ StructSig;
+}.
 
-Inductive mem_to : GlobalMemory → LocalMemory → Reference → RuntimeValue → Prop :=.
+Record Account : Set := {
+  resources : StructID ⇀ Resource;
+  modules : ModuleName ⇀ Module
+}.
 
-Definition write_mem (G : GlobalMemory) (L : LocalMemory) (ref : Reference) (u : UnrestrictedValue) : GlobalMemory * LocalMemory.
+Definition GlobalMemory : Set := AccountAddress ⇀ Account.
+
+Record Memory := {
+  local: LocalMemory;
+  global: GlobalMemory;
+}.
+
+Definition mem_remove (M : Memory) (x : LocalVariable) : Memory.
 Admitted.
 
-Definition LocalStack : Set := list RuntimeValue.
+Definition mem_update_local (M : Memory) (x : LocalVariable) (v : RuntimeValue) : Memory.
+Admitted.
 
-Record GlobalState : Set := {
-  global_mem : GlobalMemory;
-  local_mem : LocalMemory;
-  stack : LocalStack;
-}.
+Definition mem_update_ref (M : Memory) (r : Reference) (v : RuntimeValue) : Memory.
+Admitted.
+
+Inductive maps_var_to : Memory → LocalVariable → RuntimeValue → Prop :=.
+
+Inductive maps_ref_to : Memory → Reference → RuntimeValue → Prop :=.
+
+Definition LocalStack : Set := list RuntimeValue.
 
 (** Move Instructions *)
 Inductive Instr : Set :=
@@ -184,58 +211,55 @@ Inductive Instr : Set :=
   | ReadRef : Instr
   | WriteRef : Instr
   | Pop : Instr
+  | Pack : StructType → Instr
 .
 
 (** Local State Rules *)
 Inductive step_local : ∀
-(G : GlobalMemory) (L : LocalMemory) (S : LocalStack) (i : Instr)
-(G : GlobalMemory) (L' : LocalMemory) (S' : LocalStack), Prop :=
+(M : Memory) (S : LocalStack) (i : Instr)
+(M' : Memory) (S' : LocalStack), Prop :=
   | step_mvloc : ∀ {x : LocalVariable} {v : RuntimeValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    maps_to L x v →
-    step_local G L S (MvLoc x) G (remove L x) (v :: S)
+    {M : Memory} {S : LocalStack},
+    maps_var_to M x v →
+    step_local M S (MvLoc x) (mem_remove M x) (v :: S)
   | step_cploc : ∀ {x : LocalVariable} {u : UnrestrictedValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    maps_to L x u →
-    step_local G L S (CpLoc x) G L (val (unrestrictiveValue u) :: S)
-  | step_stloc_val : ∀ {x : LocalVariable} {u : UnrestrictedValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    maps_to L x u →
-    step_local G L (val (unrestrictiveValue u) :: S) (StLoc x) G (update L x u) S
+    {M : Memory} {S : LocalStack},
+    maps_var_to M x u →
+    step_local M S (CpLoc x) M (val u :: S)
+  | step_stloc_u : ∀ {x : LocalVariable} {u : UnrestrictedValue}
+    {M : Memory} {S : LocalStack},
+    maps_var_to M x u →
+    step_local M (val u :: S) (StLoc x) (mem_update_local M x u) S
   | step_stloc_ref : ∀ {x : LocalVariable} {r : Reference}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    maps_to L x r →
-    step_local G L (ref_val r :: S) (StLoc x) G (update L x r) S
-  | step_borrow_loc : ∀ {x : LocalVariable} {v : RuntimeValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    maps_to L x v →
-    step_local G L S (BorrowLoc x) G L (ref_val {|
+    {M : Memory} {S : LocalStack},
+    maps_var_to M x r →
+    step_local M (ref_val r :: S) (StLoc x) (mem_update_local M x r) S
+  | step_borrow_loc : ∀ {x : LocalVariable} {v : Value}
+    {M : Memory} {S : LocalStack},
+    maps_var_to M x v →
+    step_local M S (BorrowLoc x) M (ref_val {|
       root := x;
       access_path := nil;
       mutability := mut
     |} :: S)
   | step_borrow_field : ∀ {x : LocalVariable} {f : FieldName} {r : Reference}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    step_local G L (ref_val r :: S) (BorrowField f) G L (ref_val (extend_ref r f) :: S) (* todo *)
+    {M : Memory} {S : LocalStack},
+    step_local M (ref_val r :: S) (BorrowField f) M (ref_val (extend_ref r f) :: S)
   | step_freeze_ref : ∀ {r : Reference}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    step_local G L (ref_val r :: S) FreezeRef G L ((ref_val (freeze_ref r)) :: S) 
+    {M : Memory} {S : LocalStack},
+    step_local M (ref_val r :: S) FreezeRef M ((ref_val (freeze_ref r)) :: S)
   | step_read_ref : ∀ {r : Reference} {u : UnrestrictedValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    mem_to G L r u →
-    step_local G L (ref_val r :: S) ReadRef G L (val (unrestrictiveValue u) :: S)
-  | step_write_ref : ∀ {root} {path} {u : UnrestrictedValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack} {G' : GlobalMemory} {L' : LocalMemory},
-    write_mem G L {|
-      root := root; access_path := path; mutability := mut
-    |} u = (G', L') →
-    step_local G L (val (unrestrictiveValue u) :: ref_val {|
-       root := root; access_path := path; mutability := mut
-    |} :: S) WriteRef G' L' S
+    {M : Memory} {S : LocalStack},
+    maps_ref_to M r u →
+    step_local M (ref_val r :: S) ReadRef M (val u :: S)
+  | step_write_ref : ∀ {r : Reference} {u : UnrestrictedValue}
+    {M : Memory} {S : LocalStack},
+    maps_ref_to M r u →
+    step_local M (val u :: ref_val r :: S) WriteRef (mem_update_ref M r u) S
   | step_pop_u : ∀ {u : UnrestrictedValue}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    step_local G L (val (unrestrictiveValue u) :: S) Pop G L S
+    {M : Memory} {S : LocalStack},
+    step_local M (val u :: S) Pop M S
   | step_pop_ref : ∀ {r : Reference}
-    {G : GlobalMemory} {L : LocalMemory} {S : LocalStack},
-    step_local G L (ref_val r :: S) Pop G L S
+    {M : Memory} {S : LocalStack},
+    step_local M (ref_val r :: S) Pop M S
   .
