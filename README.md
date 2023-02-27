@@ -21,3 +21,7 @@ The current goal of the project is to formalize the semantics of the move langua
             - [ ] mvloc
             - [x] cploc
             - [ ] ...
+        - [ ] prove resource safety is preserved by small step evaluation
+            - [ ] mvloc
+            - [ ] cploc
+            - [ ] ...
