@@ -25,6 +25,12 @@ Definition update {X : Set} {Y : Set} `{eq : EqDec X} (f : X ⇀ Y) (a : X) (b :
     | right _ => f x
     end.
 
+Fixpoint map {A B} (f : A -> B) (l:list A) : list B :=
+  match l with
+    | nil => nil
+    | a :: t => (f a) :: (map f t)
+  end.
+
 (** Names  *)
 Variable LocalVariable : Set.
 Variable var_dec_eq :  ∀ (x y : LocalVariable), {x = y} + {x <> y}.
@@ -58,7 +64,6 @@ Inductive Kind : Set := resourceKind | unrestrictedKind.
 Module StructType.
 Record StructType : Set := {
   struct_id : StructID;
-  kind : Kind;
 }.
 End StructType.
 Import StructType(StructType).
@@ -88,7 +93,7 @@ Inductive Resource : Set :=
   | resource : (FieldName ⇀ Value) -> Resource
 
 with Struct : Set :=
-  | struct : (FieldName ⇀ UnrestrictedValue) -> Struct
+  | struct : StructType → list Value -> Struct
 
 with PrimitiveValue : Set :=
   | accountAddressValue : AccountAddress -> PrimitiveValue
@@ -105,8 +110,14 @@ with Value : Set :=
   | resourceValue : Resource -> Value
   | unrestrictiveValue : UnrestrictedValue -> Value.
 
+Coercion structValue : Struct >-> UnrestrictedValue.
 Coercion resourceValue : Resource >-> Value.
 Coercion unrestrictiveValue : UnrestrictedValue >-> Value.
+Coercion primitiveValue : PrimitiveValue >-> UnrestrictedValue.
+Coercion boolValue : bool >-> PrimitiveValue.
+Coercion unsignedInt64Value : UnsignedInt64 >-> PrimitiveValue.
+Coercion accountAddressValue : AccountAddress >-> PrimitiveValue.
+Coercion bytesValue : Bytes >-> PrimitiveValue.
 
 Inductive Qualifier : Set :=
   | mut : Qualifier
@@ -130,6 +141,11 @@ Record Reference : Set := {
 Inductive is_mut : Reference → Prop :=
   | is_mut_ref : ∀ (r : Root) (p : Path), is_mut {|
     root := r; access_path := p; mutability := mut;
+  |}.
+
+Inductive is_immut : Reference → Prop :=
+  | is_immut_ref : ∀ (r : Root) (p : Path), is_immut {|
+  root := r; access_path := p; mutability := immut;
   |}.
 
 Definition extend_ref (r : Reference) (e : FieldName) : Reference :=
@@ -198,9 +214,21 @@ Inductive maps_var_to : Memory → LocalVariable → RuntimeValue → Prop :=.
 
 Inductive maps_ref_to : Memory → Reference → RuntimeValue → Prop :=.
 
+Inductive maps_struct_kind : Memory → StructType → Kind → Prop :=.
+
+Inductive maps_struct_arity : Memory → StructType → nat → Prop :=.
+
 Definition LocalStack : Set := list RuntimeValue.
 
 (** Move Instructions *)
+Inductive OpCode : Set.
+
+Inductive op_arity : OpCode → nat → Prop :=.
+
+Inductive legal : OpCode → list UnrestrictedValue → Prop :=.
+
+Definition opcode_to_op (op : OpCode) (args : list UnrestrictedValue) : UnrestrictedValue. Admitted.
+
 Inductive Instr : Set :=
   | MvLoc : LocalVariable → Instr
   | CpLoc : LocalVariable → Instr
@@ -212,7 +240,16 @@ Inductive Instr : Set :=
   | WriteRef : Instr
   | Pop : Instr
   | Pack : StructType → Instr
+  | Unpack : Instr
+  | LoadTrue : Instr
+  | LoadFalse : Instr
+  | LoadU64 : UnsignedInt64 → Instr
+  | LoadAddress : AccountAddress → Instr
+  | LoadBytes : Bytes → Instr
+  | Op : OpCode → Instr
 .
+
+Coercion Op : OpCode >-> Instr.
 
 (** Local State Rules *)
 Inductive step_local : ∀
@@ -262,4 +299,34 @@ Inductive step_local : ∀
   | step_pop_ref : ∀ {r : Reference}
     {M : Memory} {S : LocalStack},
     step_local M (ref_val r :: S) Pop M S
+  | step_pack_r : ∀ {τ : StructType} {n : nat} {lov : list Value}
+    {M : Memory} {S : LocalStack},
+    maps_struct_kind M τ resourceKind →
+    maps_struct_arity M τ n →
+    length lov = n →
+    step_local M ((map val lov) ++ S) (Pack τ) M (val (struct τ lov) :: S)
+  | step_pack_u : ∀ {τ : StructType} {n : nat} {lou : list UnrestrictedValue}
+    {M : Memory} {S : LocalStack},
+    maps_struct_kind M τ unrestrictedKind →
+    maps_struct_arity M τ n →
+    length lou = n →
+    step_local M ((map (fun x => (val (unrestrictiveValue x)))) lou) (Pack τ) M ((val (struct τ (map unrestrictiveValue lou))) :: S)
+  | step_unpack : ∀ {τ : StructType} {lov : list Value}
+    {M : Memory} {S : LocalStack},
+    step_local M (val (struct τ lov) :: S) Unpack M (map val lov ++ S)
+  | step_load_true : ∀ {M : Memory} {S : LocalStack},
+    step_local M S LoadTrue M (val true :: S)
+  | step_load_false : ∀ {M : Memory} {S : LocalStack},
+    step_local M S LoadFalse M (val false :: S)
+  | step_load_u64 : ∀ {M : Memory} {S : LocalStack} {n : UnsignedInt64},
+    step_local M S (LoadU64 n) M (val n :: S)
+  | step_load_address : ∀ {M : Memory} {S : LocalStack} {a : AccountAddress},
+    step_local M S (LoadAddress a) M (val a :: S)
+  | step_load_bytes : ∀ {M : Memory} {S : LocalStack} {b : Bytes},
+    step_local M S (LoadBytes b) M (val b :: S)
+  | step_op : ∀ {op : OpCode} {n : nat} {lou : list UnrestrictedValue}
+    {M : Memory} {S : LocalStack},
+    op_arity op n →
+    length lou = n →
+    step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
   .
