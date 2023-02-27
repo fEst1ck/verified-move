@@ -4,4 +4,4 @@ The current goal of the project is to formalize the semantics of the move langua
 
 # Current Status
 
-I'm defining the operational semantics of local instructions.
+The operational semantics for local instructions is defined.
