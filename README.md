@@ -3,12 +3,11 @@
 The current goal of the project is to formalize the semantics of the move language, prove its key safety properties, and extract a provably correct bytecode verifier.
 
 # Current Status
-
-- [ ] Operational semantics
-    - [x] definitions
+- [x] definitions
         - [x] types
         - [x] values
         - [x] memory model
+- [ ] Operational semantics
     - [x] local instructions
     - [ ] global instructions
 - [ ] Safety properties
