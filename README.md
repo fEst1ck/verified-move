@@ -4,9 +4,9 @@ The current goal of the project is to formalize the semantics of the move langua
 
 # Current Status
 - [x] definitions
-        - [x] types
-        - [x] values
-        - [x] memory model
+    - [x] types
+    - [x] values
+    - [x] memory model
 - [ ] Operational semantics
     - [x] local instructions
     - [ ] global instructions
