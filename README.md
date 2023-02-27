@@ -1,7 +1,24 @@
 # Verified Move
 
-The current goal of the project is to formalize the semantics of the move language, prove its key safety properties (e.g. resource safety), and extract a provably correct bytecode verifier.
+The current goal of the project is to formalize the semantics of the move language, prove its key safety properties, and extract a provably correct bytecode verifier.
 
 # Current Status
 
-The operational semantics for local instructions is defined.
+- [ ] Operational semantics
+    - [x] definitions
+        - [x] types
+        - [x] values
+        - [x] memory model
+    - [x] local instructions
+    - [ ] global instructions
+- [ ] Safety properties
+    - [ ] type safety
+    - [ ] reference safety
+    - [ ] resource safety
+        - [ ] define resource safety
+            - [x] define tag-consistency: resource tags are unique
+            - [ ] define resource intro/elim
+        - [ ] prove resource safety is preserved by small step evaluation
+            - [ ] mvloc
+            - [x] cploc
+            - [ ] ...

@@ -89,8 +89,15 @@ Variable Signer : Set.
 Variable UnsignedInt64 : Set.
 Variable Bytes : Set.
 
+Variable Tag : Set.
+
+Variable tag_dec_eq :  ∀ (x y : Tag), {x = y} + {x <> y}.
+Instance tag_eq_dec : EqDec Tag := {
+  eq_dec := tag_dec_eq
+}.
+
 Inductive Resource : Set :=
-  | resource : (FieldName ⇀ Value) -> Resource
+  | resource : Tag → StructType → list Value -> Resource
 
 with Struct : Set :=
   | struct : StructType → list Value -> Struct
@@ -109,6 +116,11 @@ with UnrestrictedValue : Set :=
 with Value : Set :=
   | resourceValue : Resource -> Value
   | unrestrictiveValue : UnrestrictedValue -> Value.
+
+Definition tag_of (r : Resource) : Tag :=
+  match r with
+  | resource t _ _ => t
+  end.
 
 Coercion structValue : Struct >-> UnrestrictedValue.
 Coercion resourceValue : Resource >-> Value.
@@ -131,6 +143,11 @@ Coercion local_root : LocalVariable >-> Root.
 Coercion global_root : GlobalResourceID >-> Root.
 
 Definition Path := list FieldName.
+
+Parameter read_val : Value → Path → Value → Prop.
+Axiom read_unrestricted : ∀ (u : UnrestrictedValue) (p : Path) (v : Value) (u' : UnrestrictedValue),
+  read_val u p v →
+  v = u'.
 
 Record Reference : Set := {
   root : Root;
@@ -220,14 +237,16 @@ Inductive maps_struct_arity : Memory → StructType → nat → Prop :=.
 
 Definition LocalStack : Set := list RuntimeValue.
 
+Inductive fresh_tag (M : Memory) (S : LocalStack) : Tag → Prop :=.
+
 (** Move Instructions *)
 Inductive OpCode : Set.
 
-Inductive op_arity : OpCode → nat → Prop :=.
+Parameter op_arity : OpCode → nat → Prop.
 
-Inductive legal : OpCode → list UnrestrictedValue → Prop :=.
+Parameter legal : OpCode → list UnrestrictedValue → Prop.
 
-Definition opcode_to_op (op : OpCode) (args : list UnrestrictedValue) : UnrestrictedValue. Admitted.
+Parameter opcode_to_op: OpCode → list UnrestrictedValue → UnrestrictedValue.
 
 Inductive Instr : Set :=
   | MvLoc : LocalVariable → Instr
@@ -299,12 +318,13 @@ Inductive step_local : ∀
   | step_pop_ref : ∀ {r : Reference}
     {M : Memory} {S : LocalStack},
     step_local M (ref_val r :: S) Pop M S
-  | step_pack_r : ∀ {τ : StructType} {n : nat} {lov : list Value}
+  | step_pack_r : ∀ {τ : StructType} {n : nat} {lov : list Value} {t : Tag}
     {M : Memory} {S : LocalStack},
     maps_struct_kind M τ resourceKind →
     maps_struct_arity M τ n →
     length lov = n →
-    step_local M ((map val lov) ++ S) (Pack τ) M (val (struct τ lov) :: S)
+    fresh_tag M S t →
+    step_local M ((map val lov) ++ S) (Pack τ) M (val (resource t τ lov) :: S)
   | step_pack_u : ∀ {τ : StructType} {n : nat} {lou : list UnrestrictedValue}
     {M : Memory} {S : LocalStack},
     maps_struct_kind M τ unrestrictedKind →
@@ -330,3 +350,108 @@ Inductive step_local : ∀
     length lou = n →
     step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
   .
+
+(** Execution sequence  *)
+Record state := {
+  mem : Memory;
+  stack : LocalStack;
+}.
+
+Record StackRef := {
+  stack_root : nat;
+  stack_path : Path;
+}.
+
+Parameter stack_maps_to : LocalStack → StackRef → Value → Prop.
+
+Axiom stack_maps_to_car : ∀ (s : LocalStack) (a : Value)
+  (root : nat) (p : Path) (v : Value),
+  read_val a p v →
+  stack_maps_to (val a :: s) {|
+    stack_root := 0; stack_path := p;
+  |} v.
+
+Axiom stack_maps_to_cdr : ∀ (s : LocalStack) (a : Value)
+  (root : nat) (p : Path) (v : Value),
+  stack_maps_to s {|
+    stack_root := S root;
+    stack_path := p;
+  |} v →
+  stack_maps_to s {|
+    stack_root := root; stack_path := p;
+  |} v.
+
+Axiom stack_maps_to_cons : ∀ (s : LocalStack) (a : Value)
+(root : nat) (p : Path) (v : Value),
+stack_maps_to s {|
+  stack_root := root; stack_path := p;
+|} v →
+stack_maps_to s {|
+  stack_root := S root;
+  stack_path := p;
+|} v.
+
+Definition state_loc : Set := Reference + StackRef.
+
+Parameter state_maps_to : state → state_loc → Value → Prop.
+
+Axiom state_maps_unique : ∀ (s : state) (l : state_loc) (v1 v2 : Value),
+  state_maps_to s l v1 →
+  state_maps_to s l v2 →
+  v1 = v2.
+
+Axiom state_maps_to_mem_compat0 : ∀ (s : state) (r : Reference) (v : Value),
+  maps_ref_to s.(mem) r v -> state_maps_to s (inl r) v.
+
+Axiom state_maps_to_mem_compat1 : ∀ (s : state) (r : Reference) (v : Value),
+  state_maps_to s (inl r) v -> maps_ref_to s.(mem) r v.
+
+Definition tag_consistent (s : state) : Prop :=
+  ∀ (l1 l2 : state_loc) (c1 c2 : Resource),
+    state_maps_to s l1 c1 →
+    state_maps_to s l2 c2 →
+    tag_of c1 = tag_of c2 →
+    l1 = l2.
+
+Inductive step : state → state → Prop :=
+  | step_c : ∀ {s0 s1 : state} {i : Instr},
+    step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack) →
+    step s0 s1.
+
+Theorem step_preserve_tag_consistent :
+∀ (s0 s1 : state),
+  tag_consistent s0 →
+  step s0 s1 →
+  tag_consistent s1.
+Proof.
+  intros s0 s1 Hc Hs.
+  destruct s0. destruct s1.
+  destruct Hs.
+  inversion H.
+  + admit.
+  (* cploc *)
+  + unfold tag_consistent. intros.
+    ++ destruct l1; destruct l2.
+      +++ assert (state_maps_to s0 (inl r) c1). {
+        apply state_maps_to_mem_compat1 in H6.
+        apply state_maps_to_mem_compat0.
+        rewrite H0.
+        assumption.
+      } assert (state_maps_to s0 (inl r0) c2). {
+        apply state_maps_to_mem_compat1 in H7.
+        apply state_maps_to_mem_compat0.
+        rewrite H0.
+        assumption.
+      }
+      unfold tag_consistent in Hc.
+      apply Hc with (l1:=inl r) (l2:=inl r0) (c1:=c1) (c2:=c2); assumption.
+Admitted.
+  
+
+
+Inductive steps_local : state → state → Prop :=
+  | refl : ∀ {s : state}, steps_local s s
+  | trans : ∀ {s0 s1 s2 : state} {i : Instr},
+    step s0 s1 →
+    steps_local s1 s2 →
+    steps_local s0 s2.
