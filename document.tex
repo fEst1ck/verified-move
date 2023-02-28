@@ -1,0 +1,179 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb}
+
+%%%%%%%%%% Start TeXmacs macros
+\newcommand{\colons}{\,:\,}
+\newcommand{\tmop}[1]{\ensuremath{\operatorname{#1}}}
+\newcommand{\tmstrong}[1]{\textbf{#1}}
+\newcommand{\tmxspace}{\hspace{1em}}
+\newtheorem{definition}{Definition}
+%%%%%%%%%% End TeXmacs macros
+
+\begin{document}
+
+\section{Definitions}
+
+\subsection{Identifiers}
+
+$\begin{array}{lll}
+  &  & \tmop{ModuleName}\\
+  &  & \tmop{StructName}\\
+  f & \in & \tmop{FieldName}\\
+  x & \in & \tmop{VarName}
+\end{array}$
+
+\subsection{Types and Kinds}
+
+$\begin{array}{lllll}
+  &  & \tmop{Kind} & = & \tmstrong{\tmop{resource}} |
+  \tmstrong{\tmop{unrestredted}}\\
+  &  & \tmop{ModuleId} & = & \tmop{AccountAddr} \times \tmop{ModuleName}\\
+  s & \in & \tmop{StructID} & = & \tmop{ModuleID} \times \tmop{StructName}\\
+  &  & \tmop{StructType} & = & \tmop{StructID}\\
+  &  & \tmop{PrimitiveType} & = & \tmop{AccountAddr} \cup \tmop{Bool} \cup
+  \tmop{Unsigned} 64 \cup \tmop{Bytes}\\
+  a & \in & \tmop{AccountAddr} &  & \\
+  b & \in & \tmop{Bool} &  & \\
+  n & \in & \tmop{Unsigned} 64 &  & \\
+  \vec{b} & \in & \tmop{Bytes} &  & \\
+  \tau & \in & \tmop{NonRefType} & = & \tmop{StructType} \times
+  \tmop{Primitive}\\
+  &  & \tmop{Type} & = & \text{$\tau$ \textbar $\&\tmop{mut} \tau$ \textbar
+  $\&\tau$ }
+\end{array}$
+
+\subsection{Values}
+
+$\begin{array}{lllll}
+  r v & \in & \tmop{Resource} & = & \tmop{StructID} \times \tmop{Tag} \times
+  \tmop{Value}^{\ast}\\
+  &  & \tmop{Struct} & = & \tmop{StructID} \times
+  \tmop{UnrestrictedValue}^{\ast}\\
+  &  & \tmop{PrimitiveValue} & = & \text{$a$ \textbar $b$ \textbar $n$
+  \textbar $\vec{b}$}\\
+  u & \in & \tmop{UnrestrictedValue} & = & \tmop{Struct} \cup
+  \tmop{PrimitiveValue}\\
+  v & \in & \tmop{Value} & = & \tmop{Resource} \cup \tmop{UnrestrictedValue}\\
+  r & \in & \tmop{Reference} & = & \tmop{Root} \times \tmop{Path} \times
+  \tmop{Qualifier}\\
+  &  & \tmop{Root} & = & \text{$x$ \textbar $s$}\\
+  p & \in & \tmop{Path} & = & f^{\ast}\\
+  q & \in & \tmop{Qualifier} & = & \text{{\tmstrong{mut}} \textbar
+  {\tmstrong{immut}}}\\
+  &  & \tmop{RuntimeValue} & = & \text{$v$ \textbar $r$}
+\end{array}$
+
+\subsection{Memory}
+
+$\begin{array}{lllll}
+  M & \in & \tmop{Memory} & = & \tmop{LocalMemory} \times
+  \tmop{GlobalMemory}\\
+  &  & \tmop{LocalMemory} & = & \tmop{Var} \rightharpoonup
+  \tmop{RuntimeVal}\\
+  &  & \tmop{GlobalMemory} & = & \tmop{AccountAddr} \rightharpoonup
+  \tmop{Account}\\
+  &  & \tmop{Account} & = & \tmop{ModuleName} \rightharpoonup \tmop{Module}\\
+  &  & \tmop{Module} & = & \tmop{StructName} \rightharpoonup
+  \tmop{StructSig}\\
+  &  & \tmop{StructSig} & = & \tmop{Kind} \times (\tmop{FieldName} \times
+  \tmop{NonRefType})^{\ast}
+\end{array}$
+
+We write $M (l)$ to be the value stored at $l$ in memory $M$, where $l$ could
+be a local variable or a reference. We write $M [l \mapsto v]$ to be the
+memory with $l$ updated to have value $v$, and otherwise identical with $M$.
+We use $M\backslash x$ to denote the memory with $x$ removed, and otherwise
+identical with $M$.
+
+\subsection{Local Evaluation State}
+
+$\begin{array}{lllll}
+  \sigma & \in & \tmop{LocalState} & = & \langle M, S \rangle\\
+  S & \in & \tmop{LocalStack} & = & \tmop{RuntimeValue}^{\ast}\\
+  l & \in & \tmop{Location} & = & \text{$x.p$ \textbar $s.p$ \textbar $n.p$ }
+\end{array}$
+
+We write $\sigma (l) = v$ if the (possibly runtime) value stored at $l$ is
+$v$.
+
+\begin{definition}
+  A local state $\sigma$ is tag-consistent if $\sigma (l_1) = r v_1$, $\sigma
+  (l_2) = r v_2$ and $\tmop{tag} (r v_1) = \tmop{tag} (r v_2)$ implies that
+  $l_1 = l_2$. That is, each resource value hold in $\sigma$ has a unique tag.
+\end{definition}
+
+\section{Judgements}
+
+\begin{table}[h]
+  \begin{tabular}{ll}
+    {\tmstrong{Judgement}} & {\tmstrong{Meaning}}\\
+    $r q$ & reference $r$ has mutability $q$\\
+    $M \vartriangleright t \tmstrong{\tmop{Fresh}}$ & tag $t$ is fresh in
+    $M$\\
+    $M \vartriangleright \tmxspace \kappa \tau \{ f_1 : \tau_1, \ldots, f_n :
+    \tau_n \}$ & In memory $M$ struct type $\tau$ has kind $\kappa$, field
+    name $f_i$ and field types $\tau_i$\\
+    $\langle M, S \rangle \xrightarrow{i} \langle M', S' \rangle$ & state
+    $\langle M, S \rangle$ steps to $\langle M, S \rangle$ after executing
+    instruction $i$
+  \end{tabular}
+  \caption{}
+\end{table}
+
+\section{Operational Semantics}
+
+\subsection{Local Instructions}
+
+\[ \frac{M (x) = v \vee M (x) = r}{\langle M, S \rangle
+   \xrightarrow{\tmop{MvLoc} \langle x \rangle} \langle M\backslash x, M (x)
+   \colons S \rangle}  \tmstrong{\tmop{MvLoc}} \]
+\[ \frac{M (x) = u \vee M (x) = r}{\langle M, S \rangle
+   \xrightarrow{\tmop{CpLoc} \langle x \rangle} \langle M, M (x) \colons S
+   \rangle}  \tmstrong{\tmop{CpLoc}} \]
+\[ \frac{s = u \vee s = r}{\langle M, s \colons S \rangle
+   \xrightarrow{\tmop{StLoc} \langle x \rangle} \langle M [x \mapsto s], S
+   \rangle}  \tmstrong{\tmop{StLoc}} \]
+
+\[ \frac{M (x) = v}{\langle M, S \rangle \xrightarrow{\tmop{BorrowLoc} \langle
+   x \rangle} \left\langle M, \tmstrong{\tmop{ref}}  \left\langle x, [],
+   \tmstrong{\tmop{mut}} \right\rangle \right\rangle} 
+   \tmstrong{\tmop{BorrowLoc}} \]
+\[ \frac{r = \tmstrong{\tmop{ref}} \langle l, p, q \rangle}{\langle M, r
+   \colons S \rangle \xrightarrow{\tmop{BorrowField} \langle f \rangle}
+   \left\langle M, \tmstrong{\tmop{ref}}  \langle l, p \colons f, q \rangle
+   \colons S \right\rangle}  \tmstrong{\tmop{BorrowField}} \]
+\[ \frac{r = \tmstrong{\tmop{ref}}  \langle l, p, q \rangle}{\langle M, r
+   \colons S \rangle \xrightarrow{\tmop{FreezeRef}} \left\langle M,
+   \tmstrong{\tmop{ref}}  \left\langle M, \tmstrong{\tmop{ref}}  \left\langle
+   l, p, \tmstrong{\tmop{immut}} \right\rangle \right\rangle \right\rangle} 
+   \tmstrong{\tmop{FreezeRef}} \]
+\[ \frac{M (r) = u}{\langle M, r \colons S \rangle
+   \xrightarrow{\tmop{ReadRef}} \langle M, u \colons S \rangle} 
+   \tmstrong{\tmop{ReadRef}} \]
+\[ \frac{r \tmstrong{\tmop{mut}} \quad M (r) = u}{\langle M, v \colons r
+   \colons S \rangle \xrightarrow{\tmop{WriteRef}} \langle M [r \mapsto v], S
+   \rangle}  \tmstrong{\tmop{WriteRef}} \]
+\[ \frac{s = u \vee s = r}{\langle M, s \colons S \rangle
+   \xrightarrow{\tmop{Pop}} \langle M, S \rangle}  \tmstrong{\tmop{Pop}} \]
+\[ \frac{M \vartriangleright \tmxspace \tmstrong{\tmop{resource}} \tau \{ f_1
+   : \tau_1, \ldots, f_n : \tau_n \} \quad M \vartriangleright t
+   \tmstrong{\tmop{Fresh}}}{\langle M, [v_i]^n_{i = 1} \colons S \rangle
+   \xrightarrow{\tmop{Pack} \langle \tau \rangle} \left\langle M, \left\langle
+   \tmstrong{\tmop{resource}} \tau \{ f_1 : v_1, \ldots, f_n : v_n \} \colons
+   S, t \right\rangle \right\rangle}  \tmstrong{\tmop{PackR}} \]
+\[ \frac{M \vartriangleright \tmxspace \tmstrong{\tmop{unrestricted}} \tau \{
+   f_1 : \tau_1, \ldots, f_n : \tau_n \}}{\langle M, [u_i]^n_{i = 1} \colons S
+   \rangle \xrightarrow{\tmop{Pack} \langle \tau \rangle} \left\langle M,
+   \tmstrong{\tmop{resource}} \tau \{ f_1 : u_1, \ldots, f_n : u_n \} \colons
+   S \right\rangle}  \tmstrong{\tmop{PackU}} \]
+\[ \frac{}{\langle M, \kappa \tau \{ f_1 : v_1, \ldots, f_n : v_n \} \colons S
+   \rangle \xrightarrow{\tmop{Unpack}} \langle M, v_1 \colons \cdots \colons
+   v_n \colons S \rangle}  \tmstrong{\tmop{Unpack}} \]
+\[ \frac{}{\langle M, S \rangle \xrightarrow{\tmop{LoadConst} \langle a
+   \rangle} \langle M, a \colons S \rangle}  \tmstrong{\tmop{LoadConst}} \]
+\[ \frac{| \tmop{op} | = n}{\langle M, u_1 \colons \cdots \colons u_n \colons
+   S \rangle \xrightarrow{\tmop{Op}} \langle M, \tmop{op} (u_1, \ldots, u_n)
+   \colons S \rangle}  \tmstrong{\tmop{StackOp}} \]
+
+\end{document}
