@@ -1,12 +1,23 @@
 # Verified Move
 
-The current goal of the project is to formalize the semantics of the move language, prove its key safety properties, and extract a provably correct bytecode verifier.
+The current goal of the project is to formalize the semantics of the move language in Coq, prove its key safety properties, and extract a provably correct bytecode verifier.
+
+# Documentation
+
+The definitions used in the project are documented in more readable form in `document.*`.
+
+# Requirement
+
+I'm using Coq version: 8.16.
 
 # Current Status
 - [x] definitions
     - [x] types
     - [x] values
     - [x] memory model
+- [ ] static semantics
+    - [ ] borrow checking rules
+    - [ ] type checking rules
 - [ ] Operational semantics
     - [x] local instructions
     - [ ] global instructions
