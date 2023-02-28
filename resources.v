@@ -53,10 +53,7 @@ Record StructID : Set := {
   name : StructName;
 }.
 
-Record GlobalResourceID : Set := {
-  addr : AccountAddress;
-  struct_id : StructID;
-}.
+Definition GlobalResourceID := StructID.
 
 (** Types *)
 Inductive Kind : Set := resourceKind | unrestrictedKind.
