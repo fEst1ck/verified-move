@@ -17,7 +17,7 @@ The current goal of the project is to formalize the semantics of the move langua
         - [ ] define resource safety
             - [x] define tag-consistency: resource tags are unique
             - [ ] define resource intro/elim
-        - [ ] prove resource safety is preserved by small step evaluation
+        - [ ] prove tag-consistency is preserved by small step evaluation
             - [ ] mvloc
             - [x] cploc
             - [ ] ...
