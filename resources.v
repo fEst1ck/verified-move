@@ -1,276 +1,13 @@
-Require Import Coq.Unicode.Utf8_core.
+
+Require Import Coq.Lists.List.
 Open Scope list_scope.
-
-(** Utility *)
-Notation "A ⇀ B" := (A → option B) (at level 75, right associativity).
-
-Inductive maps_to : ∀ {A B : Set} (f : A ⇀ B) (x : A) (y : B), Prop :=
-  maps_to_ : ∀ {A B : Set} (f : A ⇀ B) (x : A) (y : B),
-    f x = Some(y) →
-    maps_to f x y.
-
-Class EqDec (A : Type) := {
-  eq_dec : ∀ (x y : A), {x = y} + {x <> y}
-}.
-
-Definition remove {X : Set} {Y : Set} `{eq : EqDec X} (f : X ⇀ Y) (a : X) : X ⇀ Y :=
-  fun x => match eq_dec x a with
-    | left _ => None
-    | right _ => f x
-    end.
-
-Definition update {X : Set} {Y : Set} `{eq : EqDec X} (f : X ⇀ Y) (a : X) (b : Y) : X ⇀ Y :=
-  fun x => match eq_dec x a with
-    | left _ => Some(b)
-    | right _ => f x
-    end.
-
-Fixpoint map {A B} (f : A -> B) (l:list A) : list B :=
-  match l with
-    | nil => nil
-    | a :: t => (f a) :: (map f t)
-  end.
-
-(** Names  *)
-Variable LocalVariable : Set.
-Variable var_dec_eq :  ∀ (x y : LocalVariable), {x = y} + {x <> y}.
-Instance var_eq_dec : EqDec LocalVariable := {
-  eq_dec := var_dec_eq
-}.
-
-Variable FieldName : Set.
-Variable StructName : Set.
-Variable ModuleName : Set.
-Variable AccountAddress : Set.
-
-Record ModuleID : Set := {
-  account_addr : AccountAddress;
-  module_name : ModuleName;
-}.
-
-Record StructID : Set := {
-  mod_id : ModuleID;
-  name : StructName;
-}.
-
-Definition GlobalResourceID := StructID.
-
-(** Types *)
-Inductive Kind : Set := resourceKind | unrestrictedKind.
-
-Module StructType.
-Record StructType : Set := {
-  struct_id : StructID;
-}.
-End StructType.
-Import StructType(StructType).
-
-Inductive PrimitiveType : Set :=
-  | accountAddressType : PrimitiveType
-  | signerType : PrimitiveType
-  | boolType : PrimitiveType
-  | unsignedInt64Type : PrimitiveType
-  | bytesType : PrimitiveType.
-
-Inductive NonReferenceType : Set :=
-  | structNonReferenceType : StructType -> NonReferenceType
-  | primitiveNonReferenceType : PrimitiveType -> NonReferenceType.
-
-Inductive MoveType : Set :=
-  | nonReferenceMoveType : NonReferenceType -> MoveType
-  | mutRefMoveType : NonReferenceType -> MoveType
-  | refMoveType : NonReferenceType -> MoveType.
-
-(** Values *)
-Variable Signer : Set.
-Variable UnsignedInt64 : Set.
-Variable Bytes : Set.
-
-Variable Tag : Set.
-
-Variable tag_dec_eq :  ∀ (x y : Tag), {x = y} + {x <> y}.
-Instance tag_eq_dec : EqDec Tag := {
-  eq_dec := tag_dec_eq
-}.
-
-Inductive Resource : Set :=
-  | resource : Tag → StructType → list Value -> Resource
-
-with Struct : Set :=
-  | struct : StructType → list Value -> Struct
-
-with PrimitiveValue : Set :=
-  | accountAddressValue : AccountAddress -> PrimitiveValue
-  | signerValue : Signer -> PrimitiveValue
-  | boolValue : bool -> PrimitiveValue
-  | unsignedInt64Value : UnsignedInt64 -> PrimitiveValue
-  | bytesValue : Bytes -> PrimitiveValue
-
-with UnrestrictedValue : Set :=
-  | structValue : Struct -> UnrestrictedValue
-  | primitiveValue : PrimitiveValue -> UnrestrictedValue
-
-with Value : Set :=
-  | resourceValue : Resource -> Value
-  | unrestrictiveValue : UnrestrictedValue -> Value.
-
-Definition tag_of (r : Resource) : Tag :=
-  match r with
-  | resource t _ _ => t
-  end.
-
-Coercion structValue : Struct >-> UnrestrictedValue.
-Coercion resourceValue : Resource >-> Value.
-Coercion unrestrictiveValue : UnrestrictedValue >-> Value.
-Coercion primitiveValue : PrimitiveValue >-> UnrestrictedValue.
-Coercion boolValue : bool >-> PrimitiveValue.
-Coercion unsignedInt64Value : UnsignedInt64 >-> PrimitiveValue.
-Coercion accountAddressValue : AccountAddress >-> PrimitiveValue.
-Coercion bytesValue : Bytes >-> PrimitiveValue.
-
-Inductive Qualifier : Set :=
-  | mut : Qualifier
-  | immut : Qualifier.
-
-Inductive Root : Set :=
-  | local_root : LocalVariable -> Root
-  | global_root : GlobalResourceID -> Root.
-
-Coercion local_root : LocalVariable >-> Root.
-Coercion global_root : GlobalResourceID >-> Root.
-
-Definition Path := list FieldName.
-
-Parameter read_val : Value → Path → Value → Prop.
-
-Axiom read_unrestricted : ∀ (u : UnrestrictedValue) (p : Path) (v : Value),
-  read_val u p v →
-  ∃ (u' : UnrestrictedValue), v = u'.
-
-Axiom read_resource : ∀ (s : Value) (p : Path) (a : Resource),
-read_val s p a →
-∃ (b : Resource), s = b.
-
-Record Reference : Set := {
-  root : Root;
-  access_path : Path;
-  mutability : Qualifier;
-}.
-
-Inductive is_mut : Reference → Prop :=
-  | is_mut_ref : ∀ (r : Root) (p : Path), is_mut {|
-    root := r; access_path := p; mutability := mut;
-  |}.
-
-Inductive is_immut : Reference → Prop :=
-  | is_immut_ref : ∀ (r : Root) (p : Path), is_immut {|
-  root := r; access_path := p; mutability := immut;
-  |}.
-
-Definition extend_ref (r : Reference) (e : FieldName) : Reference :=
-  match r with
-  | {| root := root ; access_path := access_path; mutability := mutability |} => {|
-    root := root;
-    access_path := access_path ++ (cons e nil);
-    mutability := mutability;
-  |}
-  end.
-
-Definition freeze_ref (r : Reference) : Reference :=
-  match r with
-  | {| root := root; access_path := access_path; mutability := _ |} => {|
-      root := root;
-      access_path := access_path;
-      mutability := immut;
-  |}
-  end.
-
-Inductive RuntimeValue : Set :=
-  | val : Value → RuntimeValue
-  | ref_val : Reference → RuntimeValue.
-
-Coercion val : Value >-> RuntimeValue.
-Coercion ref_val : Reference >-> RuntimeValue.
-Coercion foo (v : UnrestrictedValue) := val (unrestrictiveValue v).
-
-(** * States  *)
-Definition LocalMemory : Set := LocalVariable ⇀ RuntimeValue.
-
-Module StructSig.
-Record StructSig := {
-  kind : Kind;
-  field: list (FieldName * NonReferenceType)
-}.
-End StructSig.
-Import StructSig(StructSig).
-
-Record Module : Set := {
-  struct_decls : StructName ⇀ StructSig;
-}.
-
-Record Account : Set := {
-  resources : StructID ⇀ Resource;
-  modules : ModuleName ⇀ Module
-}.
-
-Definition GlobalMemory : Set := AccountAddress ⇀ Account.
-
-Record Memory := {
-  local: LocalMemory;
-  global: GlobalMemory;
-}.
-
-Definition mem_remove (M : Memory) (x : LocalVariable) : Memory.
-Admitted.
-
-Definition mem_update_local (M : Memory) (x : LocalVariable) (v : RuntimeValue) : Memory.
-Admitted.
-
-Definition mem_update_ref (M : Memory) (r : Reference) (v : RuntimeValue) : Memory.
-Admitted.
-
-Inductive maps_var_to : Memory → LocalVariable → RuntimeValue → Prop :=.
-
-Inductive maps_ref_to : Memory → Reference → RuntimeValue → Prop :=.
-
-Inductive maps_struct_kind : Memory → StructType → Kind → Prop :=.
-
-Inductive maps_struct_arity : Memory → StructType → nat → Prop :=.
-
-Definition LocalStack : Set := list RuntimeValue.
-
-Inductive fresh_tag (M : Memory) (S : LocalStack) : Tag → Prop :=.
-
-(** Move Instructions *)
-Inductive OpCode : Set.
-
-Parameter op_arity : OpCode → nat → Prop.
-
-Parameter legal : OpCode → list UnrestrictedValue → Prop.
-
-Parameter opcode_to_op: OpCode → list UnrestrictedValue → UnrestrictedValue.
-
-Inductive Instr : Set :=
-  | MvLoc : LocalVariable → Instr
-  | CpLoc : LocalVariable → Instr
-  | StLoc : LocalVariable → Instr
-  | BorrowLoc : LocalVariable → Instr
-  | BorrowField : FieldName → Instr
-  | FreezeRef : Instr
-  | ReadRef : Instr
-  | WriteRef : Instr
-  | Pop : Instr
-  | Pack : StructType → Instr
-  | Unpack : Instr
-  | LoadTrue : Instr
-  | LoadFalse : Instr
-  | LoadU64 : UnsignedInt64 → Instr
-  | LoadAddress : AccountAddress → Instr
-  | LoadBytes : Bytes → Instr
-  | Op : OpCode → Instr
-.
-
-Coercion Op : OpCode >-> Instr.
+Import ListNotations.
+Require Import Resources.utility.
+Require Import Resources.name.
+Require Import Resources.type.
+Require Import Resources.value.
+Require Import Resources.memory.
+Require Import Resources.instr.
 
 (** Local State Rules *)
 Inductive step_local : ∀
@@ -297,7 +34,7 @@ Inductive step_local : ∀
     maps_var_to M x v →
     step_local M S (BorrowLoc x) M (ref_val {|
       root := x;
-      access_path := nil;
+      access_path := [ ];
       mutability := mut
     |} :: S)
   | step_borrow_field : ∀ {x : LocalVariable} {f : FieldName} {r : Reference}
@@ -389,7 +126,7 @@ Axiom stack_maps_to_cdr : ∀ (s : LocalStack)
     stack_root := root; stack_path := p;
   |} v.
 
-Lemma stack_maps_empty : ∀ (r : StackRef) (v : Value), ¬ stack_maps_to nil r v.
+Lemma stack_maps_empty : ∀ (r : StackRef) (v : Value), ¬ stack_maps_to [ ] r v.
 Proof.
   intros.
   destruct r.
@@ -422,7 +159,7 @@ stack_maps_to (val u :: s) {|
 |} c.
 Proof.
   intros.
-  destruct root0.
+  destruct root.
   {
     apply stack_maps_to_car1 in H.
     destruct H. destruct H. destruct H.
@@ -435,7 +172,7 @@ Proof.
   {
     apply stack_maps_to_cdr in H.
     destruct H. destruct H. destruct H.
-    exists root0.
+    exists root.
     split.
     + reflexivity.
     + inversion H.
