@@ -145,9 +145,14 @@ Coercion global_root : GlobalResourceID >-> Root.
 Definition Path := list FieldName.
 
 Parameter read_val : Value → Path → Value → Prop.
-Axiom read_unrestricted : ∀ (u : UnrestrictedValue) (p : Path) (v : Value) (u' : UnrestrictedValue),
+
+Axiom read_unrestricted : ∀ (u : UnrestrictedValue) (p : Path) (v : Value),
   read_val u p v →
-  v = u'.
+  ∃ (u' : UnrestrictedValue), v = u'.
+
+Axiom read_resource : ∀ (s : Value) (p : Path) (a : Resource),
+read_val s p a →
+∃ (b : Resource), s = b.
 
 Record Reference : Set := {
   root : Root;
@@ -371,25 +376,75 @@ Axiom stack_maps_to_car : ∀ (s : LocalStack) (a : Value)
     stack_root := 0; stack_path := p;
   |} v.
 
-Axiom stack_maps_to_cdr : ∀ (s : LocalStack) (a : Value)
+Axiom stack_maps_to_car1 : ∀ (s : LocalStack) (p : Path) (v : Value),
+stack_maps_to s {|
+  stack_root := 0; stack_path := p;
+|} v →
+∃ (a : Value) (s' : LocalStack), (val a :: s') = s ∧ read_val a p v.
+
+Axiom stack_maps_to_cdr : ∀ (s : LocalStack)
   (root : nat) (p : Path) (v : Value),
   stack_maps_to s {|
     stack_root := S root;
     stack_path := p;
   |} v →
-  stack_maps_to s {|
+  ∃ a s', s = a :: s' ∧ stack_maps_to s' {|
     stack_root := root; stack_path := p;
   |} v.
+
+Lemma stack_maps_empty : ∀ (r : StackRef) (v : Value), ¬ stack_maps_to nil r v.
+Proof.
+  intros.
+  destruct r.
+  destruct stack_root0; unfold not; intros.
+  + apply stack_maps_to_car1 in H.
+    destruct H. destruct H. destruct H.
+    inversion H.
+  + apply stack_maps_to_cdr in H.
+    destruct H. destruct H. destruct H.
+    inversion H.
+Qed.
 
 Axiom stack_maps_to_cons : ∀ (s : LocalStack) (a : Value)
 (root : nat) (p : Path) (v : Value),
 stack_maps_to s {|
   stack_root := root; stack_path := p;
 |} v →
-stack_maps_to s {|
+stack_maps_to (val a :: s) {|
   stack_root := S root;
   stack_path := p;
 |} v.
+
+Lemma stack_maps_to_u_cons :
+∀ (u : UnrestrictedValue) (s : LocalStack) (root : nat) (p : Path) (c : Resource),
+stack_maps_to (val u :: s) {|
+  stack_root := root; stack_path := p;
+|} c →
+∃ n', S n' = root ∧ stack_maps_to s {|
+  stack_root := n'; stack_path := p;
+|} c.
+Proof.
+  intros.
+  destruct root0.
+  {
+    apply stack_maps_to_car1 in H.
+    destruct H. destruct H. destruct H.
+    apply read_resource in H0.
+    destruct H0.
+    inversion H.
+    rewrite H0 in H2.
+    inversion H2.
+  }
+  {
+    apply stack_maps_to_cdr in H.
+    destruct H. destruct H. destruct H.
+    exists root0.
+    split.
+    + reflexivity.
+    + inversion H.
+      assumption. 
+  }
+Qed.
 
 Definition state_loc : Set := Reference + StackRef.
 
@@ -405,6 +460,12 @@ Axiom state_maps_to_mem_compat0 : ∀ (s : state) (r : Reference) (v : Value),
 
 Axiom state_maps_to_mem_compat1 : ∀ (s : state) (r : Reference) (v : Value),
   state_maps_to s (inl r) v -> maps_ref_to s.(mem) r v.
+
+Axiom state_maps_to_stack_compat0 : ∀ (s : state) (r : StackRef) (v : Value),
+stack_maps_to s.(stack) r v -> state_maps_to s (inr r) v.
+
+Axiom state_maps_to_stack_compat1 : ∀ (s : state) (r : StackRef) (v : Value),
+state_maps_to s (inr r) v -> stack_maps_to s.(stack) r v.
 
 Definition tag_consistent (s : state) : Prop :=
   ∀ (l1 l2 : state_loc) (c1 c2 : Resource),
@@ -431,8 +492,8 @@ Proof.
   + admit.
   (* cploc *)
   + unfold tag_consistent. intros.
-    ++ destruct l1; destruct l2.
-      +++ assert (state_maps_to s0 (inl r) c1). {
+    destruct l1; destruct l2.
+      ++ assert (state_maps_to s0 (inl r) c1). {
         apply state_maps_to_mem_compat1 in H6.
         apply state_maps_to_mem_compat0.
         rewrite H0.
@@ -445,9 +506,74 @@ Proof.
       }
       unfold tag_consistent in Hc.
       apply Hc with (l1:=inl r) (l2:=inl r0) (c1:=c1) (c2:=c2); assumption.
+      ++ unfold tag_consistent in Hc.
+        apply state_maps_to_mem_compat1 in H6.
+        rewrite <- H0 in H6.
+        apply state_maps_to_mem_compat0 in H6.
+        apply state_maps_to_stack_compat1 in H7.
+        rewrite <- H4 in H7.
+        destruct s.
+        destruct stack_root0.
+        {
+          apply stack_maps_to_car1 in H7.
+          destruct H7. destruct H7. destruct H7.
+          inversion H7.
+          contradiction.
+        }
+        {
+          apply stack_maps_to_cdr in H7.
+          destruct H7. destruct H7. destruct H7.
+          inversion H7.
+          rewrite <- H12 in H9.
+          apply state_maps_to_stack_compat0 in H9.
+          specialize Hc with (l1 := inl r) (l2 := inr {| stack_root := stack_root0; stack_path := stack_path0 |}) (c1:=c1) (c2:=c2).
+          apply Hc in H6; auto.
+          inversion H6.
+        }
+      ++ unfold tag_consistent in Hc.
+        apply state_maps_to_mem_compat1 in H7.
+        rewrite <- H0 in H7.
+        apply state_maps_to_mem_compat0 in H7.
+        apply state_maps_to_stack_compat1 in H6.
+        rewrite <- H4 in H6.
+        destruct s.
+        destruct stack_root0.
+        {
+          apply stack_maps_to_car1 in H6.
+          destruct H6. destruct H6. destruct H6.
+          inversion H6.
+          contradiction.
+        }
+        {
+          apply stack_maps_to_cdr in H6.
+          destruct H6. destruct H6. destruct H6.
+          inversion H6.
+          rewrite <- H12 in H9.
+          apply state_maps_to_stack_compat0 in H9.
+          specialize Hc with (l2 := inl r) (l1 := inr {| stack_root := stack_root0; stack_path := stack_path0 |}) (c1:=c1) (c2:=c2).
+          apply Hc in H7; auto.
+          inversion H7.
+        }
+      ++ unfold tag_consistent in Hc.
+        apply state_maps_to_stack_compat1 in H6.
+        apply state_maps_to_stack_compat1 in H7.
+        rewrite <- H4 in H6, H7.
+        destruct s.
+        apply stack_maps_to_u_cons in H6.
+        destruct H6. destruct H6.
+        apply state_maps_to_stack_compat0 in H9.
+        destruct s2.
+        apply stack_maps_to_u_cons in H7.
+        destruct H7. destruct H7.
+        apply state_maps_to_stack_compat0 in H10.
+        specialize Hc with (l1 := (inr {| stack_root := x0; stack_path := stack_path0 |})) (l2 := (inr {| stack_root := x1; stack_path := stack_path1 |}))
+        (c1 := c1) (c2 := c2).
+        apply Hc in H9; auto.
+        rewrite <- H6.
+        rewrite <- H7.
+        inversion H9.
+        reflexivity.
 Admitted.
-  
-
 
 Inductive steps_local : state → state → Prop :=
   | refl : ∀ {s : state}, steps_local s s
