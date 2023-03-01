@@ -11,7 +11,8 @@
 
   <subsection|Types and Kinds>
 
-  <math|<tabular|<tformat|<table|<row|<cell|>|<cell|>|<cell|Kind>|<cell|=>|<cell|<strong|resource>\|<strong|unrestredted>>>|<row|<cell|>|<cell|>|<cell|ModuleId>|<cell|=>|<cell|AccountAddr\<times\>ModuleName>>|<row|<cell|s>|<cell|\<in\>>|<cell|StructID>|<cell|=>|<cell|ModuleID\<times\>StructName>>|<row|<cell|>|<cell|>|<cell|StructType>|<cell|=>|<cell|StructID>>|<row|<cell|>|<cell|>|<cell|PrimitiveType>|<cell|=>|<cell|AccountAddr\<cup\>Bool\<cup\>Unsigned64\<cup\>Bytes>>|<row|<cell|a>|<cell|\<in\>>|<cell|AccountAddr>|<cell|>|<cell|>>|<row|<cell|b>|<cell|\<in\>>|<cell|Bool>|<cell|>|<cell|>>|<row|<cell|n>|<cell|\<in\>>|<cell|Unsigned64>|<cell|>|<cell|>>|<row|<cell|<wide|b|\<vect\>>>|<cell|\<in\>>|<cell|Bytes>|<cell|>|<cell|>>|<row|<cell|\<tau\>>|<cell|\<in\>>|<cell|NonRefType>|<cell|=>|<cell|StructType\<times\>Primitive>>|<row|<cell|>|<cell|>|<cell|Type>|<cell|=>|<cell|<text|<math|\<tau\>>
+  <math|<tabular|<tformat|<table|<row|<cell|>|<cell|>|<cell|Kind>|<cell|=>|<cell|<strong|resource><text|
+  \| <math|<strong|unrestricted>>>>>|<row|<cell|>|<cell|>|<cell|ModuleId>|<cell|=>|<cell|AccountAddr\<times\>ModuleName>>|<row|<cell|s>|<cell|\<in\>>|<cell|StructID>|<cell|=>|<cell|ModuleID\<times\>StructName>>|<row|<cell|>|<cell|>|<cell|StructType>|<cell|=>|<cell|StructID>>|<row|<cell|>|<cell|>|<cell|PrimitiveType>|<cell|=>|<cell|AccountAddr\<cup\>Bool\<cup\>Unsigned64\<cup\>Bytes>>|<row|<cell|a>|<cell|\<in\>>|<cell|AccountAddr>|<cell|>|<cell|>>|<row|<cell|b>|<cell|\<in\>>|<cell|Bool>|<cell|>|<cell|>>|<row|<cell|n>|<cell|\<in\>>|<cell|Unsigned64>|<cell|>|<cell|>>|<row|<cell|<wide|b|\<vect\>>>|<cell|\<in\>>|<cell|Bytes>|<cell|>|<cell|>>|<row|<cell|\<tau\>>|<cell|\<in\>>|<cell|NonRefType>|<cell|=>|<cell|StructType\<times\>Primitive>>|<row|<cell|>|<cell|>|<cell|Type>|<cell|=>|<cell|<text|<math|\<tau\>>
   \| <math|&mut \<tau\>> \| <math|& \<tau\>> >>>>>>>
 
   <subsection|Values>
@@ -162,15 +163,15 @@
 <\references>
   <\collection>
     <associate|auto-1|<tuple|1|1>>
-    <associate|auto-10|<tuple|3.1|1>>
+    <associate|auto-10|<tuple|3.1|2>>
     <associate|auto-2|<tuple|1.1|1>>
     <associate|auto-3|<tuple|1.2|1>>
     <associate|auto-4|<tuple|1.3|1>>
     <associate|auto-5|<tuple|1.4|1>>
     <associate|auto-6|<tuple|1.5|1>>
-    <associate|auto-7|<tuple|2|1>>
-    <associate|auto-8|<tuple|1|1>>
-    <associate|auto-9|<tuple|3|1>>
+    <associate|auto-7|<tuple|2|2>>
+    <associate|auto-8|<tuple|1|2>>
+    <associate|auto-9|<tuple|3|2>>
   </collection>
 </references>
 
