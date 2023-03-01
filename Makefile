@@ -1,4 +1,4 @@
-MODULES := utility name type value memory instr resources
+MODULES := utility name type value memory instr small_step resources
 VS := $(MODULES:%=%.v)
 
 .PHONY: coq clean
