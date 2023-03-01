@@ -6,7 +6,7 @@ Require Import Resources.value.
 (** Memory model  *)
 Definition LocalMemory : Set := LocalVariable ⇀ RuntimeValue.
 
-Inductive local_mem_contains_r : LocalMemory → Resource → Prop :=
+Inductive local_mem_contains_r : LocalMemory → Resource → Set :=
   | local_mem_contains_r_c : ∀ {L : LocalMemory} {x : LocalVariable } {r1 r2 : Resource},
     maps_to L x r1 →
     resource_contains_r r1 r2 →
@@ -32,7 +32,7 @@ Record Account : Set := {
 
 Definition GlobalMemory : Set := AccountAddress ⇀ Account.
 
-Inductive global_mem_contains_r : GlobalMemory → Resource → Prop :=
+Inductive global_mem_contains_r : GlobalMemory → Resource → Set :=
   | global_mem_contains_r_c : ∀ {G : GlobalMemory} {x : GlobalResourceID} {a} {r1 r2 : Resource},
     maps_to G x.(mod_id).(account_addr) a →
     maps_to a.(resources) x.(name) r1 →
@@ -45,7 +45,7 @@ Record Memory := {
   global: GlobalMemory;
 }.
 
-Inductive mem_contains_r : Memory → Resource → Prop :=
+Inductive mem_contains_r : Memory → Resource → Set :=
   | local_mem_cr : ∀ L G r, local_mem_contains_r L r → mem_contains_r {|
     local := L; global := G;
   |} r
@@ -73,7 +73,7 @@ Inductive maps_struct_arity : Memory → StructType → nat → Prop :=.
 
 Definition LocalStack : Set := list RuntimeValue.
 
-Inductive lstack_contains_r : LocalStack → Resource → Prop :=
+Inductive lstack_contains_r : LocalStack → Resource → Set :=
   | lstack_car : ∀ (r1 r2 : Resource) S,
     resource_contains_r r1 r2 →
     lstack_contains_r (val r1 :: S) r2

@@ -10,117 +10,324 @@ Require Import Resources.memory.
 Require Import Resources.instr.
 Require Import Resources.small_step.
 
-Record StackRef := {
-  stack_root : nat;
-  stack_path : Path;
-}.
+Definition pre_tag_consistent (s : state) : Prop :=
+  ∀ (r1 r2 : Resource),
+    state_contains_r s r1 →
+    state_contains_r s r2 →
+    tag_of r1 = tag_of r2 →
+    r1 = r2.
 
-Parameter stack_maps_to : LocalStack → StackRef → Value → Prop.
+Theorem step_preserve_tag_consistent :
+∀ (s0 s1 : state),
+  pre_tag_consistent s0 →
+  step s0 s1 →
+  pre_tag_consistent s1.
+Proof.
+intros s0 s1 Hc Hs.
+destruct Hs as [s0 s1 i].
+unfold pre_tag_consistent.
+inversion H.
++ admit.
++ intros.
+  unfold pre_tag_consistent in Hc. 
+    (* r1, r2 on stack or in mem? *)
+    inversion H6; inversion H7.
+    {
+      (* both in mem  *)
+      apply Hc.
+      {
+        apply state_mem_contains.
+        rewrite H0.
+        assumption.
+      }
+      {
+        apply state_mem_contains.
+        rewrite H0.
+        assumption.
+      }
+      {
+        assumption.
+      }
+    }
+    {
+      (* r1 on mem, r2 on stack *)
+      subst.
+      apply Hc.
+      {
+        apply state_mem_contains.
+        rewrite H0.
+        assumption.
+      }
+      {
+        apply state_stack_contains.
+        rewrite <- H4 in H12.
+        apply stack_contains_cons_u in H12.
+        assumption.
+      }
+      {
+        assumption.
+      }
+    }
+    {
+      (* r1 on mem, r2 on stack *)
+      subst.
+      apply Hc.
+      {
+        apply state_stack_contains.
+        rewrite <- H4 in H9.
+        apply stack_contains_cons_u in H9.
+        assumption.
+      }
+      {
+        apply state_mem_contains.
+        rewrite H0.
+        assumption.
+      }
+      {
+        assumption.
+      }
+    }
+    {
+      subst.
+      apply Hc.
+      {
+        apply state_stack_contains.
+        rewrite <- H4 in H9.
+        apply stack_contains_cons_u in H9.
+        assumption.
+      }
+      {
+        apply state_stack_contains.
+        rewrite <- H4 in H12.
+        apply stack_contains_cons_u in H12.
+        assumption.
+      }
+      {
+        assumption.
+      }
+    }
+  ++ intros.
+    unfold tag_consistent in Hc. destruct Hc as [_ Hc].
+    (* destruct s0.
+    destruct s1.
+    simpl in *.
+    subst.
+    destruct p1. *)
+    destruct p1; destruct p2.
+    {
+      subst.
+      destruct s.
+      simpl in *.
+      subst.
+      assert (m = m0). {
+      remember (state_mem_contains s0 r m0) as m0'.
+      remember (state_mem_contains s0 r m) as m'.
+      pose proof (Hc r m0' m').
+      rewrite Heqm0' in H0.
+      rewrite Heqm' in H0.
+      apply foo in H0.
+      symmetry.
+      assump
 
-Axiom stack_maps_to_car : ∀ (s : LocalStack) (a : Value)
-  (root : nat) (p : Path) (v : Value),
-  read_val a p v →
-  stack_maps_to (val a :: s) {|
-    stack_root := 0; stack_path := p;
-  |} v.
 
-Axiom stack_maps_to_car1 : ∀ (s : LocalStack) (p : Path) (v : Value),
-stack_maps_to s {|
-  stack_root := 0; stack_path := p;
-|} v →
-∃ (a : Value) (s' : LocalStack), (val a :: s') = s ∧ read_val a p v.
+Definition tag_consistent (s : state) : Prop :=
+  (∀ (r1 r2 : Resource),
+    state_contains_r s r1 →
+    state_contains_r s r2 →
+    tag_of r1 = tag_of r2 →
+    r1 = r2) ∧
+  (∀ (r : Resource) (p1 p2 : state_contains_r s r), p1 = p2).
 
-Axiom stack_maps_to_cdr : ∀ (s : LocalStack)
-  (root : nat) (p : Path) (v : Value),
-  stack_maps_to s {|
-    stack_root := S root;
-    stack_path := p;
-  |} v →
-  ∃ a s', s = a :: s' ∧ stack_maps_to s' {|
-    stack_root := root; stack_path := p;
-  |} v.
-
-Lemma stack_maps_empty : ∀ (r : StackRef) (v : Value), ¬ stack_maps_to [ ] r v.
+Lemma stack_contains_cons_u : ∀ (u : UnrestrictedValue) s r,
+  lstack_contains_r (val u :: s) r →
+  lstack_contains_r s r.
 Proof.
   intros.
-  destruct r.
-  destruct stack_root0; unfold not; intros.
-  + apply stack_maps_to_car1 in H.
-    destruct H. destruct H. destruct H.
-    inversion H.
-  + apply stack_maps_to_cdr in H.
-    destruct H. destruct H. destruct H.
-    inversion H.
+  inversion H.
+  assumption.
 Qed.
 
-Axiom stack_maps_to_cons : ∀ (s : LocalStack) (a : Value)
-(root : nat) (p : Path) (v : Value),
-stack_maps_to s {|
-  stack_root := root; stack_path := p;
-|} v →
-stack_maps_to (val a :: s) {|
-  stack_root := S root;
-  stack_path := p;
-|} v.
-
-Lemma stack_maps_to_u_cons :
-∀ (u : UnrestrictedValue) (s : LocalStack) (root : nat) (p : Path) (c : Resource),
-stack_maps_to (val u :: s) {|
-  stack_root := root; stack_path := p;
-|} c →
-∃ n', S n' = root ∧ stack_maps_to s {|
-  stack_root := n'; stack_path := p;
-|} c.
+Lemma foo s :
+(∀ (r : Resource) (p1 p2 : state_contains_r s r), p1 = p2) →
+(∀ r (p1 p2 : mem_contains_r s.(mem) r), p1 = p2).
 Proof.
   intros.
-  destruct root.
-  {
-    apply stack_maps_to_car1 in H.
-    destruct H. destruct H. destruct H.
-    apply read_resource in H0.
-    destruct H0.
-    inversion H.
-    rewrite H0 in H2.
-    inversion H2.
+  remember (s.(mem)) as mem.
+  remember (s.(stack)) as stack.
+  remember (state_mem_contains mem r p1 stack) as x.
+  remember (state_mem_contains mem r p2 stack) as y.
+  assert (s = {| mem := mem; stack := stack |}). {
+    rewrite Heqmem. rewrite Heqstack.
+    destruct s.
+    simpl.
+    reflexivity.
   }
-  {
-    apply stack_maps_to_cdr in H.
-    destruct H. destruct H. destruct H.
-    exists root.
-    split.
+  rewrite <- H0 in x.
+  specialize H with r x y.
+  rewrite Heqx in H.
+  rewrite Heqy in H.
+  inversion H.
+  inversion H1.
+  inversion (existT (λ s : state, {r : Resource & mem_contains_r (mem s) r}) s
+  (existT (λ r : Resource, mem_contains_r (mem s) r) r p1) ).
+  simpl in H1.
+  intuition.
+  auto.
+  destruct x.
+
+(* Inductive state_contains_r' : state → Resource → Set :=
+  | state_mem_contains : ∀ m s r, mem_contains_r m r → state_contains_r' {|
+    mem := m;
+    stack := s;
+  |} r
+  | state_stack_contains : ∀ s r, lstack_contains_r s.(stack) r → state_contains_r' s r
+. *)
+
+Lemma foo : ∀ s r x y, state_mem_contains s r x = state_mem_contains s r y → x = y.
+Proof.
+  intros.
+  destruct (state_mem_contains s r x) eqn:E1.
+  inversion H.
+  + 
+  destruct (state_mem_contains s r x) eqn:E1; destruct (state_mem_contains s r y) eqn:E2.
+  +  
+  - destruct (state_mem_contains s r y) eqn:E2.
+    + assert (x0 = x) as Hx. { apply (mem_contains_r_proof_uniq s.(mem) r); auto. }
+      assert (x0 = y) as Hy. { apply (mem_contains_r_proof_uniq s.(mem) r); auto. }
+      rewrite Hx, Hy. reflexivity.
+    + discriminate H.
+  - destruct (state_mem_contains s r y) eqn:E2.
+    + discriminate H.
     + reflexivity.
-    + inversion H.
-      assumption. 
-  }
 Qed.
 
-Definition state_loc : Set := Reference + StackRef.
+Lemma foo : ∀ s r x y, state_mem_contains s r x = state_mem_contains s r y → x = y.
+Proof.
+  intros.
+  inversion H.
+Admitted.
 
-Parameter state_maps_to : state → state_loc → Value → Prop.
+Theorem step_preserve_tag_consistent :
+∀ (s0 s1 : state),
+  tag_consistent s0 →
+  step s0 s1 →
+  tag_consistent s1.
+Proof.
+  intros s0 s1 Hc Hs.
+  destruct Hs as [s0 s1 i].
+  unfold tag_consistent.
+  inversion H.
+  + admit.
+  + split.
+    ++ intros.
+      unfold tag_consistent in Hc. destruct Hc as [Hc _].
+      (* r1, r2 on stack or in mem? *)
+      inversion H6; inversion H7.
+      {
+        (* both in mem  *)
+        apply Hc.
+        {
+          apply state_mem_contains.
+          rewrite H0.
+          assumption.
+        }
+        {
+          apply state_mem_contains.
+          rewrite H0.
+          assumption.
+        }
+        {
+          assumption.
+        }
+      }
+      {
+        (* r1 on mem, r2 on stack *)
+        subst.
+        apply Hc.
+        {
+          apply state_mem_contains.
+          rewrite H0.
+          assumption.
+        }
+        {
+          apply state_stack_contains.
+          rewrite <- H4 in H12.
+          apply stack_contains_cons_u in H12.
+          assumption.
+        }
+        {
+          assumption.
+        }
+      }
+      {
+        (* r1 on mem, r2 on stack *)
+        subst.
+        apply Hc.
+        {
+          apply state_stack_contains.
+          rewrite <- H4 in H9.
+          apply stack_contains_cons_u in H9.
+          assumption.
+        }
+        {
+          apply state_mem_contains.
+          rewrite H0.
+          assumption.
+        }
+        {
+          assumption.
+        }
+      }
+      {
+        subst.
+        apply Hc.
+        {
+          apply state_stack_contains.
+          rewrite <- H4 in H9.
+          apply stack_contains_cons_u in H9.
+          assumption.
+        }
+        {
+          apply state_stack_contains.
+          rewrite <- H4 in H12.
+          apply stack_contains_cons_u in H12.
+          assumption.
+        }
+        {
+          assumption.
+        }
+      }
+    ++ intros.
+      unfold tag_consistent in Hc. destruct Hc as [_ Hc].
+      (* destruct s0.
+      destruct s1.
+      simpl in *.
+      subst.
+      destruct p1. *)
+      destruct p1; destruct p2.
+      {
+       subst.
+       destruct s.
+       simpl in *.
+       subst.
+       assert (m = m0). {
+        remember (state_mem_contains s0 r m0) as m0'.
+        remember (state_mem_contains s0 r m) as m'.
+        pose proof (Hc r m0' m').
+        rewrite Heqm0' in H0.
+        rewrite Heqm' in H0.
+        apply foo in H0.
+        symmetry.
+        assumption.
+       }
+       rewrite H0.
+       reflexivity.
+      }
+      {
 
-Axiom state_maps_unique : ∀ (s : state) (l : state_loc) (v1 v2 : Value),
-  state_maps_to s l v1 →
-  state_maps_to s l v2 →
-  v1 = v2.
-
-Axiom state_maps_to_mem_compat0 : ∀ (s : state) (r : Reference) (v : Value),
-  maps_ref_to s.(mem) r v -> state_maps_to s (inl r) v.
-
-Axiom state_maps_to_mem_compat1 : ∀ (s : state) (r : Reference) (v : Value),
-  state_maps_to s (inl r) v -> maps_ref_to s.(mem) r v.
-
-Axiom state_maps_to_stack_compat0 : ∀ (s : state) (r : StackRef) (v : Value),
-stack_maps_to s.(stack) r v -> state_maps_to s (inr r) v.
-
-Axiom state_maps_to_stack_compat1 : ∀ (s : state) (r : StackRef) (v : Value),
-state_maps_to s (inr r) v -> stack_maps_to s.(stack) r v.
-
-Definition tag_consistent' (s : state) : Prop :=
-  ∀ (l1 l2 : state_loc) (c1 c2 : Resource),
-    state_maps_to s l1 c1 →
-    state_maps_to s l2 c2 →
-    tag_of c1 = tag_of c2 →
-    l1 = l2.
+      }
+      }
+      apply Hc.
 
 Theorem step_preserve_tag_consistent' :
 ∀ (s0 s1 : state),
@@ -217,10 +424,3 @@ Proof.
         inversion H9.
         reflexivity.
 Admitted.
-
-Inductive steps_local : state → state → Prop :=
-  | refl : ∀ {s : state}, steps_local s s
-  | trans : ∀ {s0 s1 s2 : state} {i : Instr},
-    step s0 s1 →
-    steps_local s1 s2 →
-    steps_local s0 s2.
