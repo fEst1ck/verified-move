@@ -13,6 +13,13 @@ Inductive local_mem_contains_r : LocalMemory → Resource → Set :=
     local_mem_contains_r L r2
 .
 
+Inductive local_mem_contains_t : LocalMemory → Tag → Set :=
+  | local_mem_contains_tc : ∀ {L : LocalMemory} {x : LocalVariable } {r : Resource} {t : Tag},
+    maps_to L x r →
+    resource_contains_t r t →
+    local_mem_contains_t L t
+.
+
 Module StructSig.
 Record StructSig := {
   kind : Kind;
@@ -40,6 +47,14 @@ Inductive global_mem_contains_r : GlobalMemory → Resource → Set :=
     global_mem_contains_r G r2
 .
 
+Inductive global_mem_contains_t : GlobalMemory → Tag → Set :=
+  | global_mem_contains_rt : ∀ {G : GlobalMemory} {x : GlobalResourceID} {a} {r} {t},
+    maps_to G x.(mod_id).(account_addr) a →
+    maps_to a.(resources) x.(name) r →
+    resource_contains_t r t →
+    global_mem_contains_t G t
+.
+
 Record Memory := {
   local: LocalMemory;
   global: GlobalMemory;
@@ -52,6 +67,15 @@ Inductive mem_contains_r : Memory → Resource → Set :=
   | global_mem_cr : ∀ L G r, global_mem_contains_r G r → mem_contains_r {|
     local := L; global := G;
   |} r
+.
+
+Inductive mem_contains_t : Memory → Tag → Set :=
+  | local_mem_ct : ∀ L G t, local_mem_contains_t L t → mem_contains_t {|
+    local := L; global := G;
+  |} t
+  | global_mem_ct : ∀ L G t, global_mem_contains_t G t → mem_contains_t {|
+    local := L; global := G;
+  |} t
 .
 
 Definition mem_remove (M : Memory) (x : LocalVariable) : Memory.
@@ -82,8 +106,17 @@ Inductive lstack_contains_r : LocalStack → Resource → Set :=
     lstack_contains_r (v :: S) r
 .
 
+Inductive lstack_contains_t : LocalStack → Tag → Set :=
+  | lstackt_car : ∀ r t S,
+    resource_contains_t r t →
+    lstack_contains_t (val r :: S) t
+  | lstackt_cdr : ∀ v t S,
+    lstack_contains_t S t →
+    lstack_contains_t (v :: S) t
+.
+
 Inductive fresh_tag : Memory → LocalStack → Tag → Prop :=
   | fresh_tag_c : ∀ M S t,
-    (∀r, mem_contains_r M r → tag_of r ≠ t) →
-    (∀r, lstack_contains_r S r → tag_of r ≠ t) →
+    (∀t', mem_contains_t M t' → t ≠ t') →
+    (∀t', lstack_contains_t S t' → t ≠ t') →
     fresh_tag M S t.

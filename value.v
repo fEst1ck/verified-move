@@ -59,6 +59,14 @@ Inductive resource_contains_r : Resource → Resource → Prop :=
     resource_contains_r (resource t τ field_vals) r2
 .
 
+Inductive resource_contains_t : Resource → Tag → Prop :=
+  | rct_root : ∀ {r}, resource_contains_t r (tag_of r)
+  | rct_field : ∀ {t1 t2} {τ} {field_vals : list Value} {r : Resource},
+    list_contains field_vals r →
+    resource_contains_t r t2 →
+    resource_contains_t (resource t1 τ field_vals) t2
+.
+
 (** References  *)
 Inductive Qualifier : Set :=
   | mut : Qualifier
