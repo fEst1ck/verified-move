@@ -93,7 +93,28 @@ Record state := {
   stack : LocalStack;
 }.
 
+Inductive state_contains_r : state → Resource → Prop :=
+  | state_mem_contains : ∀ mem s r, mem_contains_r mem r → state_contains_r {|
+      mem := mem; stack := s;
+  |} r
+  | state_stack_contains : ∀ mem s r, lstack_contains_r s r → state_contains_r {|
+      mem := mem; stack := s;
+  |} r
+.
+
+Definition tag_consistent (s : state) : Prop :=
+  ∀ (r : Resource) (p1 p2 : state_contains_r s r), p1 = p2.
+
 Inductive step : state → state → Prop :=
   | step_c : ∀ {s0 s1 : state} {i : Instr},
     step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack) →
-    step s0 s1.
+    step s0 s1
+.
+  
+Inductive steps_local : state → state → Prop :=
+  | refl : ∀ {s : state}, steps_local s s
+  | trans : ∀ {s0 s1 s2 : state} {i : Instr},
+    step s0 s1 →
+    steps_local s1 s2 →
+    steps_local s0 s2
+.
