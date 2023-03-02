@@ -97,3 +97,59 @@ Proof.
     rewrite Hu.
     reflexivity.
 Admitted.
+
+Proposition step_preserve_mem_tag_u :
+∀ (s0 s1 : state),
+tag_uniq s0 →
+step s0 s1 →
+mem_tag_u s1.(mem).
+Proof.
+  intros s0 s1 [H1 [H2 H3]] Hs.
+  destruct Hs.
+  inversion H; subst.
+  + admit.
+  + unfold mem_tag_u in *.
+    destruct H3.
+    assumption.
+Admitted.
+
+
+Proposition step_preserve_stack_mem_disjoint :
+∀ (s0 s1 : state),
+tag_uniq s0 →
+step s0 s1 →
+stack_mem_disjoint_tag s1.(mem) s1.(stack).
+Proof.
+  intros s0 s1 [H1 [H2 H3]] Hs.
+  destruct Hs.
+  inversion H; subst.
+  + admit.
+  + unfold stack_mem_disjoint_tag in *.
+    destruct H3 as [H3 H4].
+    split.
+    ++ intros.
+      apply H3 in H5.
+      unfold notc.
+      intros.
+      apply stack_contains_t_cons_u in H6.
+      apply H5 in H6.
+      destruct H6.
+    ++ intros.
+      apply stack_contains_t_cons_u in H5.
+      apply H4 in H5.
+      assumption.
+Admitted.
+
+Proposition step_preserve_tag_u :
+∀ (s0 s1 : state),
+tag_uniq s0 →
+step s0 s1 →
+tag_uniq s1.
+Proof.
+  intros.
+  split.
+  + apply step_preserve_mem_tag_u with (s0:=s0); assumption.
+  + split.
+    ++ apply step_preserve_stack_tag_u with (s0:=s0); assumption.
+    ++ apply step_preserve_stack_mem_disjoint with (s0:=s0); assumption.
+Qed.
