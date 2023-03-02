@@ -2,6 +2,7 @@ Require Import Resources.utility.
 Require Import Resources.name.
 Require Import Resources.type.
 Require Import Resources.value.
+Require Import Coq.Program.Equality.
 
 (** Memory model  *)
 Definition LocalMemory : Set := LocalVariable ⇀ RuntimeValue.
@@ -14,11 +15,18 @@ Inductive local_mem_contains_r : LocalMemory → Resource → Set :=
 .
 
 Inductive local_mem_contains_t : LocalMemory → Tag → Set :=
-  | local_mem_contains_tc : ∀ {L : LocalMemory} {x : LocalVariable } {r : Resource} {t : Tag},
-    maps_to L x r →
+  | local_mem_contains_tc : ∀ (L : LocalMemory) (x : LocalVariable) (r : Resource),
+    maps_to L x r → ∀ t,
     resource_contains_t r t →
     local_mem_contains_t L t
 .
+
+Lemma local_mem_contains_tc_inj : ∀ L x r t H p1 p2, local_mem_contains_tc L x r t H p1 = local_mem_contains_tc L x r t H p2 → p1 = p2.
+Proof.
+  intros.
+  dependent destruction H0.
+  reflexivity.
+Qed.
 
 Module StructSig.
 Record StructSig := {
@@ -61,7 +69,7 @@ Record Memory := {
 }.
 
 Inductive mem_contains_r : Memory → Resource → Set :=
-  | local_mem_cr : ∀ L G r, local_mem_contains_r L r → mem_contains_r {|
+  | local_mem_cr : ∀ {L} {G} {r}, local_mem_contains_r L r → mem_contains_r {|
     local := L; global := G;
   |} r
   | global_mem_cr : ∀ L G r, global_mem_contains_r G r → mem_contains_r {|
@@ -78,6 +86,13 @@ Inductive mem_contains_t : Memory → Tag → Set :=
   |} t
 .
 
+Lemma local_mem_ct_inject : ∀ L G t H1 H2, local_mem_ct L G t H1 = local_mem_ct L G t H2 → H1 = H2.
+Proof.
+  intros L G t H1 H2 Heq.
+  dependent destruction Heq.
+  reflexivity.
+Qed.
+
 Definition mem_remove (M : Memory) (x : LocalVariable) : Memory.
 Admitted.
 
@@ -87,7 +102,7 @@ Admitted.
 Definition mem_update_ref (M : Memory) (r : Reference) (v : RuntimeValue) : Memory.
 Admitted.
 
-Inductive maps_var_to : Memory → LocalVariable → RuntimeValue → Prop :=.
+Definition maps_var_to (M : Memory) x v : Set := maps_to M.(local) x v.
 
 Inductive maps_ref_to : Memory → Reference → RuntimeValue → Prop :=.
 
@@ -107,15 +122,15 @@ Inductive lstack_contains_r : LocalStack → Resource → Set :=
 .
 
 Inductive lstack_contains_t : LocalStack → Tag → Set :=
-  | lstackt_car : ∀ r t S,
+  | lstackt_car : ∀ S r t,
     resource_contains_t r t →
     lstack_contains_t (val r :: S) t
-  | lstackt_cdr : ∀ v t S,
+  | lstackt_cdr : ∀ S t,
     lstack_contains_t S t →
-    lstack_contains_t (v :: S) t
+    ∀ v, lstack_contains_t (v :: S) t
 .
 
-Inductive fresh_tag : Memory → LocalStack → Tag → Prop :=
+Inductive fresh_tag : Memory → LocalStack → Tag → Set :=
   | fresh_tag_c : ∀ M S t,
     (∀t', mem_contains_t M t' → t ≠ t') →
     (∀t', lstack_contains_t S t' → t ≠ t') →

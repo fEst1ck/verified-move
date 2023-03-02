@@ -5,21 +5,15 @@ Import ListNotations.
 (** Utility *)
 Notation "A ⇀ B" := (A → option B) (at level 75, right associativity).
 
-Inductive maps_to : ∀ {A B : Set} (f : A ⇀ B) (x : A) (y : B), Prop :=
-  maps_to_ : ∀ {A B : Set} (f : A ⇀ B) (x : A) (y : B),
-    f x = Some(y) →
-    maps_to f x y.
+Definition maps_to {A B : Set} (f : A ⇀ B) (x : A) (y : B) : Set :=
+  f x = Some(y).
 
 Axiom UIP : ∀ {A : Type} {x y : A} (p1 p2 : x = y), p1 = p2.
 
 Lemma maps_to_up : ∀ {A B : Set} {f : A ⇀ B} {x : A} {y : B} (p1 p2 : maps_to f x y), p1 = p2.
 Proof.
   intros.
-  destruct p1.
-  destruct p2.
-  assert (e = e0) by apply UIP.
-  rewrite H.
-  reflexivity.
+  apply UIP.
 Qed.
 
 Class EqDec (A : Type) := {

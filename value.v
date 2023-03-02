@@ -51,7 +51,7 @@ Coercion unsignedInt64Value : UnsignedInt64 >-> PrimitiveValue.
 Coercion accountAddressValue : AccountAddress >-> PrimitiveValue.
 Coercion bytesValue : Bytes >-> PrimitiveValue.
 
-Inductive resource_contains_r : Resource → Resource → Prop :=
+Inductive resource_contains_r : Resource → Resource → Set :=
   | rc_id : ∀ {r}, resource_contains_r r r
   | rc_field : ∀ {t} {τ} {field_vals : list Value} {r1 r2 : Resource},
     list_contains field_vals r1 →
@@ -59,7 +59,7 @@ Inductive resource_contains_r : Resource → Resource → Prop :=
     resource_contains_r (resource t τ field_vals) r2
 .
 
-Inductive resource_contains_t : Resource → Tag → Prop :=
+Inductive resource_contains_t : Resource → Tag → Set :=
   | rct_root : ∀ {r}, resource_contains_t r (tag_of r)
   | rct_field : ∀ {t1 t2} {τ} {field_vals : list Value} {r : Resource},
     list_contains field_vals r →

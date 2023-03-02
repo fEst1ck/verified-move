@@ -3,6 +3,12 @@
 <style|generic>
 
 <\body>
+  <doc-data|<doc-title|Verified Move>|<doc-author|<author-data|<author-name|Zekun
+  wang>>>>
+
+  <abstract-data|<abstract|This is supposed to be a more reable version of
+  the Coq formalization.>>
+
   <section|Definitions>
 
   <subsection|Identifiers>
