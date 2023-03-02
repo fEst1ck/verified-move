@@ -8,9 +8,12 @@ The definitions used in the project are documented in more readable form in `doc
 
 # Requirement
 
-I'm using Coq version: 8.16.
+Coq version: 8.16.
 
 # Current Status
+
+The lastest development is currently on the tag-consistent branch.
+
 - [x] definitions
     - [x] types
     - [x] values
