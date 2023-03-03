@@ -25,9 +25,10 @@ I'm using Coq version: 8.16.
     - [ ] type safety
     - [ ] reference safety
     - [ ] resource safety
-        - [ ] define resource safety
+        - [x] define resource safety
             - [x] define tag-consistency: resource tags are unique
-            - [ ] define resource intro/elim
+            - [x] define resource intro/elim
+            - [x] define local resource safety
         - [ ] prove tag-consistency is preserved by small step evaluation
             - [ ] mvloc
             - [x] cploc

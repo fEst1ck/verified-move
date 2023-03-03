@@ -166,7 +166,12 @@ Definition introduce_r s0 s1 t : Type :=
   state_contains_t s1 t *
   (∀ t', state_contains_t s1 t' * notT (state_contains_t s0 t') → t' = t).
 
-Definition elim_r s0 s1 t : Type := introduce_r s1 s0 t.
+Definition elim_r s0 s1 t : Type :=
+  step s0 s1 *
+  (∀ t, state_contains_t s1 t → state_contains_t s0 t) *
+  notT (state_contains_t s1 t) *
+  state_contains_t s0 t *
+  (∀ t', state_contains_t s0 t' * notT (state_contains_t s1 t') → t' = t).
 
 Lemma resource_conservation_not_intro : ∀ {s0 s1},
   resource_conservation s0 s1 → ∀ t, notT (introduce_r s0 s1 t).
@@ -230,3 +235,26 @@ Proof.
   apply Hc0 in Hi4.
   contradiction.
 Qed.
+
+Theorem local_resource_safety : ∀ {s0 s1},
+step s0 s1 →
+resource_conservation s0 s1 +
+{ t & introduce_r s0 s1 t} +
+{ t & elim_r s0 s1 t}.
+Proof.
+Admitted.
+
+Open Scope type_scope.
+Theorem only_pack_intro_r : ∀ {s0 s1 t}
+(Hi : introduce_r s0 s1 t),
+{τ & {H & (fst (fst (fst (fst Hi)))) = @step_c s0 s1 (Pack τ) H}} +
+{r & { S & (val (resourceValue r) :: S = s1.(stack)) * (tag_of r = t) }}.
+Proof.
+Admitted.
+
+Theorem only_unpack_elim_r : ∀ {s0 s1 t}
+(Hi : elim_r s0 s1 t),
+{H & (fst (fst (fst (fst Hi)))) = @step_c s0 s1 Unpack H} +
+{ r & { S & (val (resourceValue r) :: S = s0.(stack)) * (tag_of r = t) }}.
+Proof.
+Admitted.
