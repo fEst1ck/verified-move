@@ -193,10 +193,40 @@ Qed.
 Lemma introduce_r_not_conserved : ∀ {s0 s1 t},
 introduce_r s0 s1 t → notT (resource_conservation s0 s1).
 Proof.
-  intros so s1 t Hi Hc.
+  intros s0 s1 t Hi Hc.
   destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
   destruct Hc as [[Hc1 Hc2] Hc3].
   apply Hc3 in Hi4.
   apply Hi3 in Hi4.
+  contradiction.
+Qed.
+
+Lemma introduce_r_not_elim_r : ∀ {s0 s1 t},
+introduce_r s0 s1 t → ∀ t, notT (elim_r s0 s1 t).
+Proof.
+  intros s0 s1 t1 Hi t2 Hc.
+  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
+  destruct Hc as [[[[Hc Hc0] Hc1] Hc2] Hc3].
+  apply Hc0 in Hi4.
+  contradiction.
+Qed.
+
+Lemma elim_r_not_conserved : ∀ {s0 s1 t},
+elim_r s0 s1 t → notT (resource_conservation s0 s1).
+Proof.
+  intros s0 s1 t Hi Hc.
+  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
+  destruct Hc as [[Hc1 Hc2] Hc3].
+  apply Hc2 in Hi4.
+  contradiction.
+Qed.
+
+Lemma elim_r_not_elim_r : ∀ {s0 s1 t},
+elim_r s0 s1 t → ∀ t, notT (introduce_r s0 s1 t).
+Proof.
+  intros s0 s1 t1 Hi t2 Hc.
+  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
+  destruct Hc as [[[[Hc Hc0] Hc1] Hc2] Hc3].
+  apply Hc0 in Hi4.
   contradiction.
 Qed.
