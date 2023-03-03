@@ -18,8 +18,8 @@ Definition mem_tag_u (m : Memory) : Prop := ∀ t (p1 p2 : mem_contains_t m t), 
 Definition notc (s : Set) : Prop := s → False.
 
 Definition stack_mem_disjoint_tag m s : Prop :=
-  (∀ t, mem_contains_t m t → notc (lstack_contains_t s t)) ∧
-  (∀ t, lstack_contains_t s t → notc (mem_contains_t m t)).
+  (∀ t, mem_contains_t m t → notT (lstack_contains_t s t)) ∧
+  (∀ t, lstack_contains_t s t → notT (mem_contains_t m t)).
 
 Definition tag_uniq s : Set :=
   mem_tag_u s.(mem) ∧
@@ -129,7 +129,7 @@ Proof.
     split.
     ++ intros.
       apply H3 in H5.
-      unfold notc.
+      unfold notT.
       intros.
       apply stack_contains_t_cons_u in H6.
       apply H5 in H6.
@@ -152,4 +152,51 @@ Proof.
   + split.
     ++ apply step_preserve_stack_tag_u with (s0:=s0); assumption.
     ++ apply step_preserve_stack_mem_disjoint with (s0:=s0); assumption.
+Qed.
+
+Definition resource_conservation s0 s1 : Type :=
+  step s0 s1 *
+  (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
+  (∀ t, state_contains_t s1 t → state_contains_t s0 t).
+
+Definition introduce_r s0 s1 t : Type :=
+  step s0 s1 *
+  (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
+  notT (state_contains_t s0 t) *
+  state_contains_t s1 t *
+  (∀ t', state_contains_t s1 t' * notT (state_contains_t s0 t') → t' = t).
+
+Definition elim_r s0 s1 t : Type := introduce_r s1 s0 t.
+
+Lemma resource_conservation_not_intro : ∀ {s0 s1},
+  resource_conservation s0 s1 → ∀ t, notT (introduce_r s0 s1 t).
+Proof.
+  intros s0 s1 Hc t contra.
+  destruct Hc as [[Hstep Hc1] Hc2].
+  destruct contra as [[[[_ c0] c1] c2] c3].
+  apply Hc2 in c2.
+  apply c1 in c2.
+  contradiction.
+Qed.
+
+Lemma resource_conservation_not_elim : ∀ {s0 s1},
+  resource_conservation s0 s1 → ∀ t, notT (elim_r s0 s1 t).
+Proof.
+  intros s0 s1 Hc t contra.
+  destruct Hc as [[Hstep Hc1] Hc2].
+  destruct contra as [[[[_ c0] c1] c2] c3].
+  apply Hc1 in c2.
+  apply c1 in c2.
+  contradiction.
+Qed.
+
+Lemma introduce_r_not_conserved : ∀ {s0 s1 t},
+introduce_r s0 s1 t → notT (resource_conservation s0 s1).
+Proof.
+  intros so s1 t Hi Hc.
+  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
+  destruct Hc as [[Hc1 Hc2] Hc3].
+  apply Hc3 in Hi4.
+  apply Hi3 in Hi4.
+  contradiction.
 Qed.

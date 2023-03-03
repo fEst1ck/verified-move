@@ -8,9 +8,21 @@
 \newcommand{\tmstrong}[1]{\textbf{#1}}
 \newcommand{\tmxspace}{\hspace{1em}}
 \newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
 %%%%%%%%%% End TeXmacs macros
 
 \begin{document}
+
+\title{Verified Move}
+
+\author{Zekun wang}
+
+\maketitle
+
+\begin{abstract}
+  This is supposed to be a more reable version of the Coq formalization.
+\end{abstract}
 
 \section{Definitions}
 
@@ -26,8 +38,8 @@ $\begin{array}{lll}
 \subsection{Types and Kinds}
 
 $\begin{array}{lllll}
-  &  & \tmop{Kind} & = & \tmstrong{\tmop{resource}} |
-  \tmstrong{\tmop{unrestredted}}\\
+  &  & \tmop{Kind} & = & \tmstrong{\tmop{resource}} \text{ \textbar
+  $\tmstrong{\tmop{unrestricted}}$}\\
   &  & \tmop{ModuleId} & = & \tmop{AccountAddr} \times \tmop{ModuleName}\\
   s & \in & \tmop{StructID} & = & \tmop{ModuleID} \times \tmop{StructName}\\
   &  & \tmop{StructType} & = & \tmop{StructID}\\
@@ -80,10 +92,10 @@ $\begin{array}{lllll}
   \tmop{NonRefType})^{\ast}
 \end{array}$
 
-We write $M (l)$ to be the value stored at $l$ in memory $M$, where $l$ could
-be a local variable or a reference. We write $M [l \mapsto v]$ to be the
+We write $M (l)$ to mean the value stored at $l$ (if any) in memory $M$, where
+$l$ is a local variable or a reference. We write $M [l \mapsto v]$ to mean the
 memory with $l$ updated to have value $v$, and otherwise identical with $M$.
-We use $M\backslash x$ to denote the memory with $x$ removed, and otherwise
+We use $M\backslash x$ to mean the memory with $x$ removed, and otherwise
 identical with $M$.
 
 \subsection{Local Evaluation State}
@@ -94,14 +106,7 @@ $\begin{array}{lllll}
   l & \in & \tmop{Location} & = & \text{$x.p$ \textbar $s.p$ \textbar $n.p$ }
 \end{array}$
 
-We write $\sigma (l) = v$ if the (possibly runtime) value stored at $l$ is
-$v$.
-
-\begin{definition}
-  A local state $\sigma$ is tag-consistent if $\sigma (l_1) = r v_1$, $\sigma
-  (l_2) = r v_2$ and $\tmop{tag} (r v_1) = \tmop{tag} (r v_2)$ implies that
-  $l_1 = l_2$. That is, each resource value hold in $\sigma$ has a unique tag.
-\end{definition}
+We write $\sigma (l) = v$ if value $v$ is stored at $l$.
 
 \section{Judgements}
 
@@ -116,7 +121,11 @@ $v$.
     name $f_i$ and field types $\tau_i$\\
     $\langle M, S \rangle \xrightarrow{i} \langle M', S' \rangle$ & state
     $\langle M, S \rangle$ steps to $\langle M, S \rangle$ after executing
-    instruction $i$
+    instruction $i$\\
+    $\sigma \rightarrow \sigma'$ & $\sigma \xrightarrow{i} \sigma'$ for some
+    instruction $i$\\
+    $l : t \in \sigma$ & $\sigma (l) = v$ and $\tmop{tag} (v) = t$ for some
+    value $v$
   \end{tabular}
   \caption{}
 \end{table}
@@ -175,5 +184,30 @@ $v$.
 \[ \frac{| \tmop{op} | = n}{\langle M, u_1 \colons \cdots \colons u_n \colons
    S \rangle \xrightarrow{\tmop{Op}} \langle M, \tmop{op} (u_1, \ldots, u_n)
    \colons S \rangle}  \tmstrong{\tmop{StackOp}} \]
+
+\section{Resource Safety}
+
+\begin{definition}
+  A local state $\sigma$ is well-formed iff $p_1 p_2 \tmxspace : \tmxspace t
+  \in \sigma$ implies $p_1 = p_2$. That is, resource tags are unique; a tag
+  can appear at most once in $\sigma$.
+\end{definition}
+
+\begin{proposition}
+  Small step evaluation preserves well-formedness. That is, if $\sigma$ is
+  well-formed and $\sigma \rightarrow \sigma'$, then $\sigma'$ is well-formed.
+\end{proposition}
+
+We would always assume that states are well-formed.
+
+\begin{theorem}[Local resource safety]
+  If $\sigma \rightarrow \sigma'$, then $\tmop{tag} (\sigma) = \tmop{tag}
+  (\sigma') \vee \tmop{tag} (\sigma) \cup \{ t \} = \tmop{tag} (\sigma') \vee
+  \tmop{tag} (\sigma) = \tmop{tag} (\sigma') \cup \{ t \}$. Further, the
+  second case happens iff $\sigma = \langle M, S \rangle
+  \xrightarrow{\tmop{pack}} \langle M, (v, t) \colons S \rangle = \sigma'$,
+  and the third case happens iff $\sigma = \langle M, (v, t) \colons S \rangle
+  \xrightarrow{\tmop{unpack}} \langle M, S \rangle = \sigma'$.
+\end{theorem}
 
 \end{document}

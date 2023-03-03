@@ -8,6 +8,15 @@ Require Import Resources.value.
 Require Import Resources.memory.
 Require Import Resources.instr.
 (** Local State Rules *)
+
+Record state := {
+  mem : Memory;
+  stack : LocalStack;
+}.
+
+Definition state_contains_t s t : Type := 
+   mem_contains_t s.(mem) t + lstack_contains_t s.(stack) t.
+
 Inductive step_local : ∀
 (M : Memory) (S : LocalStack) (i : Instr)
 (M' : Memory) (S' : LocalStack), Prop :=
@@ -87,11 +96,6 @@ Inductive step_local : ∀
     length lou = n →
     step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
   .
-
-Record state := {
-  mem : Memory;
-  stack : LocalStack;
-}.
 
 Inductive step : state → state → Prop :=
   | step_c : ∀ {s0 s1 : state} {i : Instr},

@@ -34,33 +34,24 @@
 
   <math|<tabular|<tformat|<table|<row|<cell|M>|<cell|\<in\>>|<cell|Memory>|<cell|=>|<cell|LocalMemory\<times\>GlobalMemory>>|<row|<cell|>|<cell|>|<cell|LocalMemory>|<cell|=>|<cell|Var\<rightharpoonup\>RuntimeVal>>|<row|<cell|>|<cell|>|<cell|GlobalMemory>|<cell|=>|<cell|AccountAddr\<rightharpoonup\>Account>>|<row|<cell|>|<cell|>|<cell|Account>|<cell|=>|<cell|ModuleName\<rightharpoonup\>Module>>|<row|<cell|>|<cell|>|<cell|Module>|<cell|=>|<cell|StructName\<rightharpoonup\>StructSig>>|<row|<cell|>|<cell|>|<cell|StructSig>|<cell|=>|<cell|Kind\<times\><around*|(|FieldName\<times\>NonRefType|)><rsup|*\<ast\>>>>>>>><inactive*|>
 
-  We write <math|M<around*|(|l|)>> to be the value stored at <math|l> in
-  memory <math|M>, where <math|l> could be a local variable or a reference.
-  We write <math|M<around*|[|l\<mapsto\>v|]>> to be the memory with <math|l>
-  updated to have value <math|v>, and otherwise identical with <math|M>. We
-  use <math|M\\x> to denote the memory with <math|x> removed, and otherwise
-  identical with <math|M>.
+  We write <math|M<around*|(|l|)>> to mean the value stored at <math|l> (if
+  any) in memory <math|M>, where <math|l> is a local variable or a reference.
+  We write <math|M<around*|[|l\<mapsto\>v|]>> to mean the memory with
+  <math|l> updated to have value <math|v>, and otherwise identical with
+  <math|M>. We use <math|M\\x> to mean the memory with <math|x> removed, and
+  otherwise identical with <math|M>.
 
   <subsection|Local Evaluation State>
 
   <math|<tabular|<tformat|<table|<row|<cell|\<sigma\>>|<cell|\<in\>>|<cell|LocalState>|<cell|=>|<cell|<around*|\<langle\>|M,S|\<rangle\>>>>|<row|<cell|S>|<cell|\<in\>>|<cell|LocalStack>|<cell|=>|<cell|RuntimeValue<rsup|\<ast\>>>>|<row|<cell|l>|<cell|\<in\>>|<cell|Location>|<cell|=>|<cell|<text|<math|x.p>
   \| <math|s.p> \| <math|n.p> >>>>>>>
 
-  We write <math|\<sigma\><around*|(|l|)>=v> if the (possibly runtime) value
-  stored at <math|l> is <math|v>.
-
-  <\definition>
-    A local state <math|\<sigma\>> is tag-consistent if
-    <math|\<sigma\><around*|(|l<rsub|1>|)>=r v<rsub|1>>,
-    <math|\<sigma\><around*|(|l<rsub|2>|)>=r v<rsub|2>> and
-    <math|tag<around*|(|r v<rsub|1>|)>=tag<around*|(|r v<rsub|2>|)>> implies
-    that <math|l<rsub|1>=l<rsub|2>>. That is, each resource value hold in
-    <math|\<sigma\>> has a unique tag.
-  </definition>
+  We write <math|\<sigma\><around*|(|l|)>=v> if value <math|v> is stored at
+  <math|l>.
 
   <section|Judgements>
 
-  <\big-table|<tabular|<tformat|<cwith|5|5|1|1|cell-bborder|0ln>|<cwith|5|5|1|1|cell-lborder|0ln>|<cwith|5|5|1|1|cell-rborder|1ln>|<cwith|5|5|2|2|cell-lborder|1ln>|<cwith|1|1|1|1|cell-tborder|1ln>|<cwith|1|1|1|1|cell-lborder|0ln>|<cwith|1|1|2|2|cell-tborder|1ln>|<cwith|1|1|2|2|cell-bborder|1ln>|<cwith|1|1|2|2|cell-lborder|1ln>|<cwith|1|1|1|1|cell-rborder|1ln>|<cwith|1|1|2|2|cell-rborder|0ln>|<cwith|4|4|1|1|cell-bborder|0ln>|<cwith|5|5|1|1|cell-tborder|0ln>|<cwith|4|4|1|1|cell-lborder|0ln>|<cwith|4|4|2|2|cell-tborder|0ln>|<cwith|4|4|2|2|cell-bborder|0ln>|<cwith|5|5|2|2|cell-tborder|0ln>|<cwith|4|4|2|2|cell-lborder|1ln>|<cwith|4|4|1|1|cell-rborder|1ln>|<cwith|4|4|2|2|cell-rborder|0ln>|<cwith|2|2|1|1|cell-tborder|1ln>|<cwith|1|1|1|1|cell-bborder|1ln>|<cwith|2|2|1|1|cell-lborder|0ln>|<cwith|2|2|1|1|cell-rborder|1ln>|<cwith|2|2|2|2|cell-lborder|1ln>|<cwith|3|3|1|1|cell-tborder|0ln>|<cwith|2|2|1|1|cell-bborder|0ln>|<cwith|3|3|1|1|cell-bborder|0ln>|<cwith|4|4|1|1|cell-tborder|0ln>|<cwith|3|3|1|1|cell-lborder|0ln>|<cwith|3|3|1|1|cell-rborder|1ln>|<cwith|3|3|2|2|cell-lborder|1ln>|<table|<row|<cell|<strong|Judgement>>|<cell|<strong|Meaning>>>|<row|<cell|<math|r
+  <\big-table|<tabular|<tformat|<cwith|5|5|1|1|cell-lborder|0ln>|<cwith|5|5|1|1|cell-rborder|1ln>|<cwith|5|5|2|2|cell-lborder|1ln>|<cwith|1|1|1|1|cell-tborder|1ln>|<cwith|1|1|1|1|cell-lborder|0ln>|<cwith|1|1|2|2|cell-tborder|1ln>|<cwith|1|1|2|2|cell-bborder|1ln>|<cwith|1|1|2|2|cell-lborder|1ln>|<cwith|1|1|1|1|cell-rborder|1ln>|<cwith|1|1|2|2|cell-rborder|0ln>|<cwith|4|4|1|1|cell-bborder|0ln>|<cwith|5|5|1|1|cell-tborder|0ln>|<cwith|4|4|1|1|cell-lborder|0ln>|<cwith|4|4|2|2|cell-tborder|0ln>|<cwith|4|4|2|2|cell-bborder|0ln>|<cwith|5|5|2|2|cell-tborder|0ln>|<cwith|4|4|2|2|cell-lborder|1ln>|<cwith|4|4|1|1|cell-rborder|1ln>|<cwith|4|4|2|2|cell-rborder|0ln>|<cwith|2|2|1|1|cell-tborder|1ln>|<cwith|1|1|1|1|cell-bborder|1ln>|<cwith|2|2|1|1|cell-lborder|0ln>|<cwith|2|2|1|1|cell-rborder|1ln>|<cwith|2|2|2|2|cell-lborder|1ln>|<cwith|3|3|1|1|cell-tborder|0ln>|<cwith|2|2|1|1|cell-bborder|0ln>|<cwith|3|3|1|1|cell-bborder|0ln>|<cwith|4|4|1|1|cell-tborder|0ln>|<cwith|3|3|1|1|cell-lborder|0ln>|<cwith|3|3|1|1|cell-rborder|1ln>|<cwith|3|3|2|2|cell-lborder|1ln>|<cwith|7|7|1|1|cell-bborder|0ln>|<cwith|7|7|1|1|cell-lborder|0ln>|<cwith|7|7|1|1|cell-rborder|1ln>|<cwith|7|7|2|2|cell-lborder|1ln>|<cwith|6|6|1|1|cell-tborder|0ln>|<cwith|5|5|1|1|cell-bborder|0ln>|<cwith|6|6|1|1|cell-bborder|0ln>|<cwith|7|7|1|1|cell-tborder|0ln>|<cwith|6|6|1|1|cell-lborder|0ln>|<cwith|6|6|1|1|cell-rborder|1ln>|<cwith|6|6|2|2|cell-lborder|1ln>|<table|<row|<cell|<strong|Judgement>>|<cell|<strong|Meaning>>>|<row|<cell|<math|r
   q>>|<cell|reference <math|r> has mutability
   <math|q>>>|<row|<cell|<math|M\<vartriangleright\>t
   <strong|Fresh>>>|<cell|tag <math|t> is fresh in
@@ -70,7 +61,9 @@
   name <math|f<rsub|i>> and field types <math|\<tau\><rsub|i>>>>|<row|<cell|<math|<around*|\<langle\>|M,S|\<rangle\>><long-arrow|\<rubber-rightarrow\>|i><around*|\<langle\>|M<rprime|'>,S<rprime|'>|\<rangle\>>>>|<cell|state
   <math|<around*|\<langle\>|M,S|\<rangle\>>> steps to
   <math|<around*|\<langle\>|M,S|\<rangle\>>> after executing instruction
-  <math|i>>>>>>>
+  <math|i>>>|<row|<cell|<math|\<sigma\>\<rightarrow\>\<sigma\><rprime|'>>>|<cell|<math|\<sigma\><long-arrow|\<rubber-rightarrow\>|i>\<sigma\><rprime|'>>
+  for some instruction <math|i>>>|<row|<cell|<math|l:t\<in\>\<sigma\>>>|<cell|<math|\<sigma\><around*|(|l|)>=v>
+  and <math|tag<around*|(|v|)>=t> for some value <math|v>>>>>>>
     \;
   </big-table>
 
@@ -158,6 +151,30 @@
     <frac|<around*|\||op|\|>=n|<around*|\<langle\>|M,u<rsub|1>\<colons\>\<cdots\>\<colons\>u<rsub|n>\<colons\>S|\<rangle\>><long-arrow|\<rubber-rightarrow\>|Op><around*|\<langle\>|M,op<around*|(|u<rsub|1>,\<ldots\>,u<rsub|n>|)>\<colons\>S|\<rangle\>>>
     <strong|StackOp>
   </equation*>
+
+  <section|Resource Safety>
+
+  <\definition>
+    A local state <math|\<sigma\>> is well-formed iff <math|p<rsub|1>
+    p<rsub|2>\<space\>:\<space\>t\<in\>\<sigma\>> implies
+    <math|p<rsub|1>=p<rsub|2>>. That is, resource tags are unique; a tag can
+    appear at most once in <math|\<sigma\>>.
+  </definition>
+
+  <\proposition>
+    Small step evaluation preserves well-formedness. That is, if
+    <math|\<sigma\>> is well-formed and <math|\<sigma\>\<rightarrow\>\<sigma\><rprime|'>>,
+    then <math|\<sigma\><rprime|'>> is well-formed.
+  </proposition>
+
+  We would always assume that states are well-formed.
+
+  <\theorem>
+    <dueto|Local resource safety>If <math|\<sigma\>\<rightarrow\>\<sigma\><rprime|'>>,
+    then <math|tag<around*|(|\<sigma\>|)>=tag<around*|(|\<sigma\><rprime|'>|)>\<vee\>tag<around*|(|\<sigma\>|)>\<cup\><around*|{|t|}>=tag<around*|(|\<sigma\><rprime|'>|)>\<vee\>tag<around*|(|\<sigma\>|)>=tag<around*|(|\<sigma\><rprime|'>|)>\<cup\><around*|{|t|}>>.
+    Further, the second case happens iff <math|\<sigma\>=<around*|\<langle\>|M,S|\<rangle\>><long-arrow|\<rubber-rightarrow\>|pack><around*|\<langle\>|M,<around*|(|v,t|)>\<colons\>S|\<rangle\>>=\<sigma\><rprime|'>>,
+    and the third case happens iff <math|><math|\<sigma\>=<around*|\<langle\>|M,<around*|(|v,t|)>\<colons\>S|\<rangle\>><long-arrow|\<rubber-rightarrow\>|unpack><around*|\<langle\>|M,S|\<rangle\>>=\<sigma\><rprime|'>>.
+  </theorem>
 </body>
 
 <\initial>
@@ -170,11 +187,12 @@
   <\collection>
     <associate|auto-1|<tuple|1|1>>
     <associate|auto-10|<tuple|3.1|2>>
+    <associate|auto-11|<tuple|4|?>>
     <associate|auto-2|<tuple|1.1|1>>
     <associate|auto-3|<tuple|1.2|1>>
     <associate|auto-4|<tuple|1.3|1>>
-    <associate|auto-5|<tuple|1.4|1>>
-    <associate|auto-6|<tuple|1.5|1>>
+    <associate|auto-5|<tuple|1.4|2>>
+    <associate|auto-6|<tuple|1.5|2>>
     <associate|auto-7|<tuple|2|2>>
     <associate|auto-8|<tuple|1|2>>
     <associate|auto-9|<tuple|3|2>>
