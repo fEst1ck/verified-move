@@ -97,11 +97,9 @@ Inductive step_local : ∀
     step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
   .
 
-Inductive step : state → state → Prop :=
-  | step_c : ∀ {s0 s1 : state} {i : Instr},
-    step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack) →
-    step s0 s1
-.
+Definition step_i s0 i s1 : Prop := step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
+
+Definition step s0 s1 : Prop := ∃ i, step_i s0 i s1.
   
 Inductive steps_local : state → state → Prop :=
   | refl : ∀ {s : state}, steps_local s s
