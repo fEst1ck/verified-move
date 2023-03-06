@@ -99,7 +99,14 @@ Inductive step_local : ∀
 
 Definition step_i s0 i s1 : Prop := step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
 
-Definition step s0 s1 : Prop := ∃ i, step_i s0 i s1.
+Definition step s0 s1 : Type := { i & step_i s0 i s1 }.
+
+Definition instr_of_step {s0 s1} (Hs : step s0 s1) : Instr.
+Proof.
+  unfold step in Hs.
+  destruct Hs as [i Hs].
+  refine i.
+Defined.
   
 Inductive steps_local : state → state → Prop :=
   | refl : ∀ {s : state}, steps_local s s

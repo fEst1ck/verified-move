@@ -15,8 +15,6 @@ Definition stack_tag_u (s : LocalStack) : Prop := ∀ t (p1 p2 : lstack_contains
 
 Definition mem_tag_u (m : Memory) : Prop := ∀ t (p1 p2 : mem_contains_t m t), p1 = p2.
 
-Definition notc (s : Set) : Prop := s → False.
-
 Definition stack_mem_disjoint_tag m s : Prop :=
   (∀ t, mem_contains_t m t → notT (lstack_contains_t s t)) ∧
   (∀ t, lstack_contains_t s t → notT (mem_contains_t m t)).
@@ -42,29 +40,27 @@ step s0 s1 →
 stack_tag_u s1.(stack).
 Proof.
   intros s0 s1 [Hm [Hu Hd]] Hs.
-  destruct Hs as [s0 s1 i].
-  unfold stack_tag_u in Hu.
-  unfold stack_tag_u.
-  inversion H.
+  destruct Hs as [i Hs].
+  unfold stack_tag_u in *.
+  inversion Hs.
   + destruct v.
-    ++
-      destruct v.
+    ++ destruct v.
       {
         intros.
         dependent destruction p1; dependent destruction p2.
-        + enough (r1 = r2).
-          rewrite H6.
+        + enough (r1 = r2) as He.
+          rewrite He.
           reflexivity.
           unfold mem_tag_u in Hm.
           destruct s0.
           simpl in *.
           destruct mem.
-          unfold maps_var_to in H5.
+          unfold maps_var_to in H4.
           simpl in *.
           subst.
           remember local as L. remember global as G.
-          remember (local_mem_ct L G t (local_mem_contains_tc L x r H5 t r1)) as p1.
-          remember (local_mem_ct L G t (local_mem_contains_tc L x r H5 t r2)) as p2.
+          remember (local_mem_ct L G t (local_mem_contains_tc L x r H4 t r1)) as p1.
+          remember (local_mem_ct L G t (local_mem_contains_tc L x r H4 t r2)) as p2.
           specialize Hm with t p1 p2.
           subst.
           dependent destruction Heqp2.
@@ -105,8 +101,8 @@ step s0 s1 →
 mem_tag_u s1.(mem).
 Proof.
   intros s0 s1 [H1 [H2 H3]] Hs.
-  destruct Hs.
-  inversion H; subst.
+  destruct Hs as [i Hs].
+  inversion Hs; subst.
   + admit.
   + unfold mem_tag_u in *.
     destruct H3.
@@ -121,23 +117,20 @@ step s0 s1 →
 stack_mem_disjoint_tag s1.(mem) s1.(stack).
 Proof.
   intros s0 s1 [H1 [H2 H3]] Hs.
-  destruct Hs.
-  inversion H; subst.
+  destruct Hs as [i Hs].
+  inversion Hs; subst.
   + admit.
   + unfold stack_mem_disjoint_tag in *.
     destruct H3 as [H3 H4].
     split.
     ++ intros.
-      apply H3 in H5.
-      unfold notT.
-      intros.
-      apply stack_contains_t_cons_u in H6.
-      apply H5 in H6.
-      destruct H6.
+      apply H3 in H0.
+      intro contra.
+      apply stack_contains_t_cons_u in contra.
+      contradiction.
     ++ intros.
-      apply stack_contains_t_cons_u in H5.
-      apply H4 in H5.
-      assumption.
+      apply stack_contains_t_cons_u in H0.
+      auto.
 Admitted.
 
 Proposition step_preserve_tag_u :
@@ -154,107 +147,103 @@ Proof.
     ++ apply step_preserve_stack_mem_disjoint with (s0:=s0); assumption.
 Qed.
 
-Definition resource_conservation s0 s1 : Type :=
-  step s0 s1 *
+Definition resource_conservation {s0} {s1} (_ : step s0 s1) : Type :=
   (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
   (∀ t, state_contains_t s1 t → state_contains_t s0 t).
 
-Definition introduce_r s0 s1 t : Type :=
-  step s0 s1 *
+Definition introduce_t {s0} {s1} (_ : step s0 s1) t : Type :=
   (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
   notT (state_contains_t s0 t) *
   state_contains_t s1 t *
   (∀ t', state_contains_t s1 t' * notT (state_contains_t s0 t') → t' = t).
 
-Definition elim_r s0 s1 t : Type :=
-  step s0 s1 *
+Definition elim_t {s0} {s1} (_ : step s0 s1) t : Type :=
   (∀ t, state_contains_t s1 t → state_contains_t s0 t) *
   notT (state_contains_t s1 t) *
   state_contains_t s0 t *
   (∀ t', state_contains_t s0 t' * notT (state_contains_t s1 t') → t' = t).
 
-Lemma resource_conservation_not_intro : ∀ {s0 s1},
-  resource_conservation s0 s1 → ∀ t, notT (introduce_r s0 s1 t).
+Lemma resource_conservation_not_intro : ∀ {s0 s1} (Hs : step s0 s1),
+  resource_conservation Hs → ∀ t, notT (introduce_t Hs t).
 Proof.
-  intros s0 s1 Hc t contra.
-  destruct Hc as [[Hstep Hc1] Hc2].
-  destruct contra as [[[[_ c0] c1] c2] c3].
-  apply Hc2 in c2.
-  apply c1 in c2.
+  intros s0 s1 Hs Hc t contra.
+  destruct Hc as [Hc1 Hc2].
+  destruct contra as [[[c1 c2] c3] c4].
+  apply Hc2 in c3.
+  apply c2 in c3.
   contradiction.
 Qed.
 
-Lemma resource_conservation_not_elim : ∀ {s0 s1},
-  resource_conservation s0 s1 → ∀ t, notT (elim_r s0 s1 t).
+Lemma resource_conservation_not_elim : ∀ {s0 s1} (Hs : step s0 s1),
+  resource_conservation Hs → ∀ t, notT (elim_t Hs t).
 Proof.
-  intros s0 s1 Hc t contra.
-  destruct Hc as [[Hstep Hc1] Hc2].
-  destruct contra as [[[[_ c0] c1] c2] c3].
-  apply Hc1 in c2.
-  apply c1 in c2.
+  intros s0 s1 Hs Hc t contra.
+  destruct Hc as [Hc1 Hc2].
+  destruct contra as [[[c1 c2] c3] c4].
+  apply Hc1 in c3.
+  apply c2 in c3.
   contradiction.
 Qed.
 
-Lemma introduce_r_not_conserved : ∀ {s0 s1 t},
-introduce_r s0 s1 t → notT (resource_conservation s0 s1).
+Lemma introduce_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
+introduce_t Hs t → notT (resource_conservation Hs).
 Proof.
-  intros s0 s1 t Hi Hc.
-  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
-  destruct Hc as [[Hc1 Hc2] Hc3].
-  apply Hc3 in Hi4.
-  apply Hi3 in Hi4.
+  intros s0 s1 Hs t Hi Hc.
+  destruct Hi as [[[Hi1 Hi2] Hi3] Hi4].
+  destruct Hc as [Hc1 Hc2].
+  apply Hc2 in Hi3.
+  apply Hi2 in Hi3.
   contradiction.
 Qed.
 
-Lemma introduce_r_not_elim_r : ∀ {s0 s1 t},
-introduce_r s0 s1 t → ∀ t, notT (elim_r s0 s1 t).
+Lemma introduce_t_not_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t},
+introduce_t Hs t → ∀ t, notT (elim_t Hs t).
 Proof.
-  intros s0 s1 t1 Hi t2 Hc.
-  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
-  destruct Hc as [[[[Hc Hc0] Hc1] Hc2] Hc3].
-  apply Hc0 in Hi4.
+  intros s0 s1 Hs t1 Hi t2 He.
+  destruct Hi as [[[Hi1 Hi2] Hi3] Hi4].
+  destruct He as [[[He1 He2] He3] He4].
+  apply Hi1 in He3.
   contradiction.
 Qed.
 
-Lemma elim_r_not_conserved : ∀ {s0 s1 t},
-elim_r s0 s1 t → notT (resource_conservation s0 s1).
+Lemma elim_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
+elim_t Hs t → notT (resource_conservation Hs).
 Proof.
-  intros s0 s1 t Hi Hc.
-  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
-  destruct Hc as [[Hc1 Hc2] Hc3].
-  apply Hc2 in Hi4.
+  intros s0 s1 Hs t He Hc.
+  destruct He as [[[He1 He2] He3] He4].
+  destruct Hc as [Hc1 Hc2].
+  apply Hc1 in He3.
   contradiction.
 Qed.
 
-Lemma elim_r_not_elim_r : ∀ {s0 s1 t},
-elim_r s0 s1 t → ∀ t, notT (introduce_r s0 s1 t).
+Lemma elim_t_not_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t},
+elim_t Hs t → ∀ t, notT (introduce_t Hs t).
 Proof.
-  intros s0 s1 t1 Hi t2 Hc.
-  destruct Hi as [[[[Hi1 Hi2] Hi3] Hi4] Hi5].
-  destruct Hc as [[[[Hc Hc0] Hc1] Hc2] Hc3].
-  apply Hc0 in Hi4.
+  intros s0 s1 Hs t1 He t2 Hi.
+  destruct Hi as [[[Hi1 Hi2] Hi3] Hi4].
+  destruct He as [[[He1 He2] He3] He4].
+  apply He1 in Hi3.
   contradiction.
 Qed.
 
-Theorem local_resource_safety : ∀ {s0 s1},
-step s0 s1 →
-resource_conservation s0 s1 +
-{ t & introduce_r s0 s1 t} +
-{ t & elim_r s0 s1 t}.
+Theorem local_resource_safety : ∀ {s0 s1} (Hs : step s0 s1),
+resource_conservation Hs +
+{ t & introduce_t Hs t} +
+{ t & elim_t Hs t}.
 Proof.
 Admitted.
 
 Open Scope type_scope.
-Theorem only_pack_intro_r : ∀ {s0 s1 t}
-(Hi : introduce_r s0 s1 t),
-{τ & {H & (fst (fst (fst (fst Hi)))) = @step_c s0 s1 (Pack τ) H}} +
+Theorem only_pack_intro_r : ∀ {s0 s1} (Hs : step s0 s1) {t}
+(Hi : introduce_t Hs t),
+{ τ & instr_of_step Hs = (Pack τ) } +
 {r & { S & (val (resourceValue r) :: S = s1.(stack)) * (tag_of r = t) }}.
 Proof.
 Admitted.
 
-Theorem only_unpack_elim_r : ∀ {s0 s1 t}
-(Hi : elim_r s0 s1 t),
-{H & (fst (fst (fst (fst Hi)))) = @step_c s0 s1 Unpack H} +
+Theorem only_unpack_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t}
+(Hi : elim_t Hs t),
+(instr_of_step Hs = Unpack) +
 { r & { S & (val (resourceValue r) :: S = s0.(stack)) * (tag_of r = t) }}.
 Proof.
 Admitted.
