@@ -23,12 +23,12 @@
 
   <subsection|Values>
 
-  <math|<tabular|<tformat|<table|<row|<cell|r
-  v>|<cell|\<in\>>|<cell|Resource>|<cell|=>|<cell|StructID\<times\>Tag\<times\>Value<rsup|\<ast\>>>>|<row|<cell|>|<cell|>|<cell|Struct>|<cell|=>|<cell|StructID\<times\>UnrestrictedValue<rsup|\<ast\>>>>|<row|<cell|>|<cell|>|<cell|PrimitiveValue>|<cell|=>|<cell|<text|<math|a>
-  \| <math|b> \| <math|n> \| <math|<wide|b|\<vect\>>>>>>|<row|<cell|u>|<cell|\<in\>>|<cell|UnrestrictedValue>|<cell|=>|<cell|Struct\<cup\>PrimitiveValue>>|<row|<cell|v>|<cell|\<in\>>|<cell|Value>|<cell|=>|<cell|Resource\<cup\>UnrestrictedValue>>|<row|<cell|r>|<cell|\<in\>>|<cell|Reference>|<cell|=>|<cell|Root\<times\>Path\<times\>Qualifier>>|<row|<cell|>|<cell|>|<cell|Root>|<cell|=>|<cell|<text|<math|x>
-  \| <math|s>>>>|<row|<cell|p>|<cell|\<in\>>|<cell|Path>|<cell|=>|<cell|f<rsup|\<ast\>>>>|<row|<cell|q>|<cell|\<in\>>|<cell|Qualifier>|<cell|=>|<cell|<text|<strong|mut>
-  \| <strong|immut>>>>|<row|<cell|>|<cell|>|<cell|RuntimeValue>|<cell|=>|<cell|<text|<math|v>
-  \| <math|r>>>>>>>>
+  <math|<tabular|<tformat|<table|<row|<cell|>|<cell|>|<cell|RuntimeValue>|<cell|=>|<cell|<text|<math|v>
+  \| <math|r>>>>|<row|<cell|v>|<cell|\<in\>>|<cell|Value>|<cell|=>|<cell|Resource\<cup\>UnrestrictedValue>>|<row|<cell|r
+  v>|<cell|\<in\>>|<cell|Resource>|<cell|=>|<cell|StructID\<times\>Tag\<times\>Value<rsup|\<ast\>>>>|<row|<cell|u>|<cell|\<in\>>|<cell|UnrestrictedValue>|<cell|=>|<cell|Struct\<cup\>PrimitiveValue>>|<row|<cell|>|<cell|>|<cell|Struct>|<cell|=>|<cell|StructID\<times\>UnrestrictedValue<rsup|\<ast\>>>>|<row|<cell|>|<cell|>|<cell|PrimitiveValue>|<cell|=>|<cell|<text|<math|a>
+  \| <math|b> \| <math|n> \| <math|<wide|b|\<vect\>>>>>>|<row|<cell|r>|<cell|\<in\>>|<cell|Reference>|<cell|=>|<cell|Root\<times\>Path\<times\>Qualifier>>|<row|<cell|>|<cell|>|<cell|Root>|<cell|=>|<cell|<text|<math|x>
+  \| <math|g>>>>|<row|<cell|g>|<cell|\<in\>>|<cell|GlobalResourceKey>|<cell|=>|<cell|AccountAddr\<times\>StructID>>|<row|<cell|p>|<cell|\<in\>>|<cell|Path>|<cell|=>|<cell|f<rsup|\<ast\>>>>|<row|<cell|q>|<cell|\<in\>>|<cell|Qualifier>|<cell|=>|<cell|<text|<strong|mut>
+  \| <strong|immut>>>>>>>>
 
   <subsection|Memory>
 
@@ -40,6 +40,8 @@
   <math|l> updated to have value <math|v>, and otherwise identical with
   <math|M>. We use <math|M\\x> to mean the memory with <math|x> removed, and
   otherwise identical with <math|M>.
+
+  <subsection|Instructions>
 
   <subsection|Local Evaluation State>
 
@@ -186,16 +188,17 @@
 <\references>
   <\collection>
     <associate|auto-1|<tuple|1|1>>
-    <associate|auto-10|<tuple|3.1|2>>
-    <associate|auto-11|<tuple|4|?>>
+    <associate|auto-10|<tuple|3|2>>
+    <associate|auto-11|<tuple|3.1|3>>
+    <associate|auto-12|<tuple|4|?>>
     <associate|auto-2|<tuple|1.1|1>>
     <associate|auto-3|<tuple|1.2|1>>
     <associate|auto-4|<tuple|1.3|1>>
     <associate|auto-5|<tuple|1.4|2>>
     <associate|auto-6|<tuple|1.5|2>>
-    <associate|auto-7|<tuple|2|2>>
-    <associate|auto-8|<tuple|1|2>>
-    <associate|auto-9|<tuple|3|2>>
+    <associate|auto-7|<tuple|1.6|2>>
+    <associate|auto-8|<tuple|2|2>>
+    <associate|auto-9|<tuple|1|2>>
   </collection>
 </references>
 
@@ -242,6 +245,10 @@
       <with|par-left|<quote|1tab>|3.1<space|2spc>Local Instructions
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-10>>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|4<space|2spc>Resource
+      Safety> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-11><vspace|0.5fn>
     </associate>
   </collection>
 </auxiliary>

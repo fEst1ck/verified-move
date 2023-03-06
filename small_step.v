@@ -76,10 +76,10 @@ Inductive step_local : ∀
     maps_struct_kind M τ unrestrictedKind →
     maps_struct_arity M τ n →
     length lou = n →
-    step_local M ((map (fun x => (val (unrestrictiveValue x)))) lou) (Pack τ) M ((val (struct τ (map unrestrictiveValue lou))) :: S)
-  | step_unpack : ∀ {τ : StructType} {lov : list Value}
+    step_local M ((map (fun x => (val (unrestrictiveValue x)))) lou) (Pack τ) M ((val (struct τ lou)) :: S)
+  | step_unpack : ∀ {τ : StructType} {t} {lov : list Value}
     {M : Memory} {S : LocalStack},
-    step_local M (val (struct τ lov) :: S) Unpack M (map val lov ++ S)
+    step_local M (val (resource t τ lov) :: S) Unpack M (map val lov ++ S)
   | step_load_true : ∀ {M : Memory} {S : LocalStack},
     step_local M S LoadTrue M (val true :: S)
   | step_load_false : ∀ {M : Memory} {S : LocalStack},

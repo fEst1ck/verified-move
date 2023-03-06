@@ -20,7 +20,7 @@ Inductive Resource : Set :=
   | resource : Tag → StructType → list Value -> Resource
 
 with Struct : Set :=
-  | struct : StructType → list Value -> Struct
+  | struct : StructType → list UnrestrictedValue -> Struct
 
 with PrimitiveValue : Set :=
   | accountAddressValue : AccountAddress -> PrimitiveValue

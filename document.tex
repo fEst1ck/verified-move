@@ -69,7 +69,9 @@ $\begin{array}{lllll}
   v & \in & \tmop{Value} & = & \tmop{Resource} \cup \tmop{UnrestrictedValue}\\
   r & \in & \tmop{Reference} & = & \tmop{Root} \times \tmop{Path} \times
   \tmop{Qualifier}\\
-  &  & \tmop{Root} & = & \text{$x$ \textbar $s$}\\
+  &  & \tmop{Root} & = & \text{$x$ \textbar $g$}\\
+  g & \in & \tmop{GlobalResourceKey} & = & \tmop{AccountAddr} \times
+  \tmop{StructID}\\
   p & \in & \tmop{Path} & = & f^{\ast}\\
   q & \in & \tmop{Qualifier} & = & \text{{\tmstrong{mut}} \textbar
   {\tmstrong{immut}}}\\
