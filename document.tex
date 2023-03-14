@@ -58,15 +58,16 @@ $\begin{array}{lllll}
 \subsection{Values}
 
 $\begin{array}{lllll}
+  &  & \tmop{RuntimeValue} & = & \text{$v$ \textbar $r$}\\
+  v & \in & \tmop{Value} & = & \tmop{Resource} \cup \tmop{UnrestrictedValue}\\
   r v & \in & \tmop{Resource} & = & \tmop{StructID} \times \tmop{Tag} \times
   \tmop{Value}^{\ast}\\
+  u & \in & \tmop{UnrestrictedValue} & = & \tmop{Struct} \cup
+  \tmop{PrimitiveValue}\\
   &  & \tmop{Struct} & = & \tmop{StructID} \times
   \tmop{UnrestrictedValue}^{\ast}\\
   &  & \tmop{PrimitiveValue} & = & \text{$a$ \textbar $b$ \textbar $n$
   \textbar $\vec{b}$}\\
-  u & \in & \tmop{UnrestrictedValue} & = & \tmop{Struct} \cup
-  \tmop{PrimitiveValue}\\
-  v & \in & \tmop{Value} & = & \tmop{Resource} \cup \tmop{UnrestrictedValue}\\
   r & \in & \tmop{Reference} & = & \tmop{Root} \times \tmop{Path} \times
   \tmop{Qualifier}\\
   &  & \tmop{Root} & = & \text{$x$ \textbar $g$}\\
@@ -74,8 +75,7 @@ $\begin{array}{lllll}
   \tmop{StructID}\\
   p & \in & \tmop{Path} & = & f^{\ast}\\
   q & \in & \tmop{Qualifier} & = & \text{{\tmstrong{mut}} \textbar
-  {\tmstrong{immut}}}\\
-  &  & \tmop{RuntimeValue} & = & \text{$v$ \textbar $r$}
+  {\tmstrong{immut}}}
 \end{array}$
 
 \subsection{Memory}
@@ -87,7 +87,9 @@ $\begin{array}{lllll}
   \tmop{RuntimeVal}\\
   &  & \tmop{GlobalMemory} & = & \tmop{AccountAddr} \rightharpoonup
   \tmop{Account}\\
-  &  & \tmop{Account} & = & \tmop{ModuleName} \rightharpoonup \tmop{Module}\\
+  &  & \tmop{Account} & = & (\tmop{StructId} \rightharpoonup
+  \tmop{ResourceValue}) \times (\tmop{ModuleName} \rightharpoonup
+  \tmop{Module})\\
   &  & \tmop{Module} & = & \tmop{StructName} \rightharpoonup
   \tmop{StructSig}\\
   &  & \tmop{StructSig} & = & \tmop{Kind} \times (\tmop{FieldName} \times
@@ -99,6 +101,10 @@ $l$ is a local variable or a reference. We write $M [l \mapsto v]$ to mean the
 memory with $l$ updated to have value $v$, and otherwise identical with $M$.
 We use $M\backslash x$ to mean the memory with $x$ removed, and otherwise
 identical with $M$.
+
+\subsection{Instructions}
+
+\
 
 \subsection{Local Evaluation State}
 

@@ -24,6 +24,78 @@ Definition tag_uniq s : Set :=
   stack_tag_u s.(stack) ∧
   stack_mem_disjoint_tag s.(mem) s.(stack).
 
+Definition state_tag_u (s : state) : Prop := ∀ t (p1 p2: state_contains_t s t), p1 = p2.
+
+Definition inject {A B} (f : A -> B) := (∀ x y, f x = f y -> x = y).
+
+Ltac prove_inj := let h := fresh "Heq" in let x := fresh "x" in let y := fresh "y" in
+  intros x y h; injection h; auto.
+
+Ltac inject f := let hn := fresh "f_inj" in
+  enough (∀ x y, f x = f y → x = y) as f_inj; try (eapply f_inj) || prove_inj.
+
+Ltac inject1 f h := 
+  enough (∀ x y, f x = f y → x = y) as h; try (eapply h) || prove_inj.
+
+Lemma state_tag_u_implies_mem_tag_u : ∀ s, state_tag_u s → mem_tag_u s.(mem).
+Proof.
+  intros s Hs t p1 p2.
+  inject (@ inl (mem_contains_t s.(mem) t) (lstack_contains_t s.(stack) t)).
+  apply Hs.
+Qed.
+
+Lemma state_tag_u_implies_stack_tag_u : ∀ s, state_tag_u s → stack_tag_u s.(stack).
+Proof.
+  intros s Hs t p1 p2.
+  inject (@ inr (mem_contains_t s.(mem) t) (lstack_contains_t s.(stack) t)).
+  apply Hs.
+Qed.
+
+Lemma state_tag_u_implies_disjoint : ∀ s, state_tag_u s → stack_mem_disjoint_tag s.(mem) s.(stack).
+Proof.
+  intros s Hs.
+  split.
+  + intros t Hm contra.
+    remember (inl Hm : state_contains_t s t) as q1 eqn:Hq1.
+    remember (inr contra : state_contains_t s t) as q2 eqn:Hq2.
+    unfold state_tag_u in Hs.
+    specialize Hs with t q1 q2.
+    subst.
+    inversion Hq2.
+  + intros t Hm contra.
+    remember (inr Hm : state_contains_t s t) as q1 eqn:Hq1.
+    remember (inl contra : state_contains_t s t) as q2 eqn:Hq2.
+    unfold state_tag_u in Hs.
+    specialize Hs with t q1 q2.
+    subst.
+    inversion Hq2.
+Qed.
+
+Lemma state_tag_u_implies_tag_uniq : ∀ s, state_tag_u s → tag_uniq s.
+Proof.
+  intros s Hs.
+  split.
+  + apply state_tag_u_implies_mem_tag_u; assumption.
+  + split.
+    ++ apply state_tag_u_implies_stack_tag_u; assumption.
+    ++ apply state_tag_u_implies_disjoint; assumption.
+Qed.
+
+Lemma tag_uniq_implies_state_tag_u : ∀ s, tag_uniq s → state_tag_u s.
+Proof.
+  intros s Hs t p1 p2.
+  destruct Hs as [Hm [Hs Hd]].
+  dependent destruction p1; dependent destruction p2.
+  + apply f_equal.
+    apply Hm. 
+  + exfalso.
+    eapply Hd; eauto.
+  + exfalso.
+    eapply Hd; eauto.
+  + apply f_equal.
+    apply Hs.
+Qed.
+
 Lemma stack_contains_t_cons_u : ∀ (u : UnrestrictedValue) s t,
   lstack_contains_t (val u :: s) t →
   lstack_contains_t s t.
@@ -48,23 +120,20 @@ Proof.
       {
         intros.
         dependent destruction p1; dependent destruction p2.
-        + enough (r1 = r2) as He.
-          rewrite He.
-          reflexivity.
-          unfold mem_tag_u in Hm.
-          destruct s0.
-          simpl in *.
-          destruct mem.
-          unfold maps_var_to in H4.
-          simpl in *.
-          subst.
-          remember local as L. remember global as G.
-          remember (local_mem_ct L G t (local_mem_contains_tc L x r H4 t r1)) as p1.
-          remember (local_mem_ct L G t (local_mem_contains_tc L x r H4 t r2)) as p2.
-          specialize Hm with t p1 p2.
-          subst.
-          dependent destruction Heqp2.
-          reflexivity.
+        + apply f_equal.
+          inject (local_mem_contains_tc s0.(mem).(local) x r H4 t).
+          inject1 (local_mem_ct (mem s0) t) f_inj1.
+          apply Hm.
+          {
+            intros.
+            dependent destruction Heq.
+            reflexivity.
+          }
+          {
+            intros.
+            dependent destruction Heq.
+            reflexivity.
+          }
         + admit.
         + admit.
         + specialize Hu with t p1 p2.
@@ -116,20 +185,20 @@ tag_uniq s0 →
 step s0 s1 →
 stack_mem_disjoint_tag s1.(mem) s1.(stack).
 Proof.
-  intros s0 s1 [H1 [H2 H3]] Hs.
-  destruct Hs as [i Hs].
-  inversion Hs; subst.
+  intros s0 s1 [_ [_ Hs0]] Hs1.
+  destruct Hs1 as [i Hs1].
+  inversion Hs1; subst.
   + admit.
   + unfold stack_mem_disjoint_tag in *.
-    destruct H3 as [H3 H4].
+    destruct Hs0 as [Hs0 H5].
     split.
-    ++ intros.
-      apply H3 in H0.
+    ++ intros t t_in_s0_mem.
+      apply Hs0 in t_in_s0_mem.
       intro contra.
       apply stack_contains_t_cons_u in contra.
       contradiction.
-    ++ intros.
-      apply stack_contains_t_cons_u in H0.
+    ++ intros t t_in_s1_stack.
+      apply stack_contains_t_cons_u in t_in_s1_stack.
       auto.
 Admitted.
 
@@ -147,7 +216,7 @@ Proof.
     ++ apply step_preserve_stack_mem_disjoint with (s0:=s0); assumption.
 Qed.
 
-Definition resource_conservation {s0} {s1} (_ : step s0 s1) : Type :=
+Definition conserve_t {s0} {s1} (_ : step s0 s1) : Type :=
   (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
   (∀ t, state_contains_t s1 t → state_contains_t s0 t).
 
@@ -163,8 +232,8 @@ Definition elim_t {s0} {s1} (_ : step s0 s1) t : Type :=
   state_contains_t s0 t *
   (∀ t', state_contains_t s0 t' * notT (state_contains_t s1 t') → t' = t).
 
-Lemma resource_conservation_not_intro : ∀ {s0 s1} (Hs : step s0 s1),
-  resource_conservation Hs → ∀ t, notT (introduce_t Hs t).
+Lemma conserve_t_not_intro : ∀ {s0 s1} (Hs : step s0 s1),
+  conserve_t Hs → ∀ t, notT (introduce_t Hs t).
 Proof.
   intros s0 s1 Hs Hc t contra.
   destruct Hc as [Hc1 Hc2].
@@ -174,8 +243,8 @@ Proof.
   contradiction.
 Qed.
 
-Lemma resource_conservation_not_elim : ∀ {s0 s1} (Hs : step s0 s1),
-  resource_conservation Hs → ∀ t, notT (elim_t Hs t).
+Lemma conserve_t_not_elim : ∀ {s0 s1} (Hs : step s0 s1),
+  conserve_t Hs → ∀ t, notT (elim_t Hs t).
 Proof.
   intros s0 s1 Hs Hc t contra.
   destruct Hc as [Hc1 Hc2].
@@ -186,7 +255,7 @@ Proof.
 Qed.
 
 Lemma introduce_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
-introduce_t Hs t → notT (resource_conservation Hs).
+introduce_t Hs t → notT (conserve_t Hs).
 Proof.
   intros s0 s1 Hs t Hi Hc.
   destruct Hi as [[[Hi1 Hi2] Hi3] Hi4].
@@ -207,7 +276,7 @@ Proof.
 Qed.
 
 Lemma elim_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
-elim_t Hs t → notT (resource_conservation Hs).
+elim_t Hs t → notT (conserve_t Hs).
 Proof.
   intros s0 s1 Hs t He Hc.
   destruct He as [[[He1 He2] He3] He4].
@@ -227,10 +296,94 @@ Proof.
 Qed.
 
 Theorem local_resource_safety : ∀ {s0 s1} (Hs : step s0 s1),
-resource_conservation Hs +
+conserve_t Hs +
 { t & introduce_t Hs t} +
 { t & elim_t Hs t}.
 Proof.
+  intros s0 s1 Hs.
+  destruct Hs as [i Hs].
+  inversion Hs; subst.
+  + admit.
+  + left. left.
+    split.
+    ++ intros t t_in_s0.
+      destruct t_in_s0.
+      {
+        left.
+        rewrite H in m.
+        assumption.
+      }
+      {
+        right.
+        rewrite <- H3.
+        apply lstackt_cdr.
+        assumption.
+      }
+    ++ intros t t_in_s1.
+      destruct t_in_s1.
+      {
+        left.
+        rewrite H.
+        assumption.
+      }
+      {
+        rewrite <- H3 in l.
+        apply stack_contains_t_cons_u in l.
+        right.
+        assumption.
+      }
+  (* StLoc *)
+  + left. left. (* prove resource conservation *)
+    split.
+    (* tag s0 ⊆ tag s1 *)
+    ++ intros t t_in_s0.
+      destruct t_in_s0.
+      (* t in memory of s0 *)
+      {
+        destruct m.
+        (* t in local memory *)
+        + left.
+          apply local_mem_ct.
+          rewrite <- H1.
+          apply mem_update_local_u1.
+          assumption.
+        (* t in global memory *)
+        + left.
+          apply global_mem_ct.
+          rewrite <- H1.
+          apply mem_update_local_global_const1.
+          assumption.
+      }
+      (* t in stack of s0 *)
+      {
+        right.
+        rewrite <- H in l.
+        apply stack_contains_t_cons_u in l.
+        assumption.
+      }
+    (* tag s1 ⊆ tag s0 *)
+    ++ intros t t_in_s1.
+      destruct t_in_s1.
+      {
+        destruct m.
+        + left.
+          apply local_mem_ct.
+          rewrite <- H1 in l.
+          apply mem_update_local_u2 in l.
+          assumption.
+        + left.
+          apply global_mem_ct.
+          rewrite <- H1 in g.
+          apply mem_update_local_global_const2 in g.
+          assumption.
+      }
+      {
+        right.
+        rewrite <- H.
+        apply lstackt_cdr.
+        assumption.
+      }
+  + 
 Admitted.
 
 Open Scope type_scope.

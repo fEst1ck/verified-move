@@ -72,31 +72,37 @@ Inductive mem_contains_r : Memory → Resource → Set :=
   | local_mem_cr : ∀ {L} {G} {r}, local_mem_contains_r L r → mem_contains_r {|
     local := L; global := G;
   |} r
-  | global_mem_cr : ∀ L G r, global_mem_contains_r G r → mem_contains_r {|
+  | global_mem_cr : ∀ {L} {G} {r}, global_mem_contains_r G r → mem_contains_r {|
     local := L; global := G;
   |} r
 .
 
 Inductive mem_contains_t : Memory → Tag → Set :=
-  | local_mem_ct : ∀ L G t, local_mem_contains_t L t → mem_contains_t {|
-    local := L; global := G;
-  |} t
-  | global_mem_ct : ∀ L G t, global_mem_contains_t G t → mem_contains_t {|
-    local := L; global := G;
-  |} t
+  | local_mem_ct : ∀ m t, local_mem_contains_t m.(local) t → mem_contains_t m t
+  | global_mem_ct : ∀ m t, global_mem_contains_t m.(global) t → mem_contains_t m t
 .
-
-Lemma local_mem_ct_inject : ∀ L G t H1 H2, local_mem_ct L G t H1 = local_mem_ct L G t H2 → H1 = H2.
-Proof.
-  intros L G t H1 H2 Heq.
-  dependent destruction Heq.
-  reflexivity.
-Qed.
 
 Definition mem_remove (M : Memory) (x : LocalVariable) : Memory.
 Admitted.
 
 Definition mem_update_local (M : Memory) (x : LocalVariable) (v : RuntimeValue) : Memory.
+Admitted.
+
+Lemma mem_update_local_global_const1 {M} {x} {v} :
+∀ t, global_mem_contains_t M.(global) t → global_mem_contains_t (mem_update_local M x v).(global) t.
+Admitted.
+
+Lemma mem_update_local_global_const2 {M} {x} {v} :
+∀ t, global_mem_contains_t (mem_update_local M x v).(global) t →
+global_mem_contains_t M.(global) t.
+Admitted.
+
+Lemma mem_update_local_u1 {M} {x} {u : UnrestrictedValue} :
+∀ t, local_mem_contains_t M.(local) t → local_mem_contains_t (mem_update_local M x u).(local) t.
+Admitted.
+
+Lemma mem_update_local_u2 {M} {x} {u : UnrestrictedValue} :
+∀ t, local_mem_contains_t (mem_update_local M x u).(local) t → local_mem_contains_t M.(local) t.
 Admitted.
 
 Definition mem_update_ref (M : Memory) (r : Reference) (v : RuntimeValue) : Memory.

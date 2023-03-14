@@ -19,7 +19,7 @@ Definition state_contains_t s t : Type :=
 
 Inductive step_local : ∀
 (M : Memory) (S : LocalStack) (i : Instr)
-(M' : Memory) (S' : LocalStack), Prop :=
+(M' : Memory) (S' : LocalStack), Type :=
   | step_mvloc : ∀ {x : LocalVariable} {v : RuntimeValue}
     {M : Memory} {S : LocalStack},
     maps_var_to M x v →
@@ -97,7 +97,7 @@ Inductive step_local : ∀
     step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
   .
 
-Definition step_i s0 i s1 : Prop := step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
+Definition step_i s0 i s1 : Type := step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
 
 Definition step s0 s1 : Type := { i & step_i s0 i s1 }.
 

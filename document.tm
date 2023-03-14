@@ -32,7 +32,7 @@
 
   <subsection|Memory>
 
-  <math|<tabular|<tformat|<table|<row|<cell|M>|<cell|\<in\>>|<cell|Memory>|<cell|=>|<cell|LocalMemory\<times\>GlobalMemory>>|<row|<cell|>|<cell|>|<cell|LocalMemory>|<cell|=>|<cell|Var\<rightharpoonup\>RuntimeVal>>|<row|<cell|>|<cell|>|<cell|GlobalMemory>|<cell|=>|<cell|AccountAddr\<rightharpoonup\>Account>>|<row|<cell|>|<cell|>|<cell|Account>|<cell|=>|<cell|ModuleName\<rightharpoonup\>Module>>|<row|<cell|>|<cell|>|<cell|Module>|<cell|=>|<cell|StructName\<rightharpoonup\>StructSig>>|<row|<cell|>|<cell|>|<cell|StructSig>|<cell|=>|<cell|Kind\<times\><around*|(|FieldName\<times\>NonRefType|)><rsup|*\<ast\>>>>>>>><inactive*|>
+  <math|<tabular|<tformat|<table|<row|<cell|M>|<cell|\<in\>>|<cell|Memory>|<cell|=>|<cell|LocalMemory\<times\>GlobalMemory>>|<row|<cell|>|<cell|>|<cell|LocalMemory>|<cell|=>|<cell|Var\<rightharpoonup\>RuntimeVal>>|<row|<cell|>|<cell|>|<cell|GlobalMemory>|<cell|=>|<cell|AccountAddr\<rightharpoonup\>Account>>|<row|<cell|>|<cell|>|<cell|Account>|<cell|=>|<cell|<around*|(|StructId\<rightharpoonup\>ResourceValue|)>\<times\><around*|(|ModuleName\<rightharpoonup\>Module|)>>>|<row|<cell|>|<cell|>|<cell|Module>|<cell|=>|<cell|StructName\<rightharpoonup\>StructSig>>|<row|<cell|>|<cell|>|<cell|StructSig>|<cell|=>|<cell|Kind\<times\><around*|(|FieldName\<times\>NonRefType|)><rsup|*\<ast\>>>>>>>><inactive*|>
 
   We write <math|M<around*|(|l|)>> to mean the value stored at <math|l> (if
   any) in memory <math|M>, where <math|l> is a local variable or a reference.
@@ -42,6 +42,8 @@
   otherwise identical with <math|M>.
 
   <subsection|Instructions>
+
+  \;
 
   <subsection|Local Evaluation State>
 
@@ -189,8 +191,8 @@
   <\collection>
     <associate|auto-1|<tuple|1|1>>
     <associate|auto-10|<tuple|3|2>>
-    <associate|auto-11|<tuple|3.1|3>>
-    <associate|auto-12|<tuple|4|?>>
+    <associate|auto-11|<tuple|3.1|2>>
+    <associate|auto-12|<tuple|4|3>>
     <associate|auto-2|<tuple|1.1|1>>
     <associate|auto-3|<tuple|1.2|1>>
     <associate|auto-4|<tuple|1.3|1>>
@@ -207,7 +209,7 @@
     <\associate|table>
       <tuple|normal|<\surround|<hidden-binding|<tuple>|1>|>
         \;
-      </surround>|<pageref|auto-8>>
+      </surround>|<pageref|auto-9>>
     </associate>
     <\associate|toc>
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|1<space|2spc>Definitions>
@@ -230,25 +232,29 @@
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-5>>
 
-      <with|par-left|<quote|1tab>|1.5<space|2spc>Local Evaluation State
+      <with|par-left|<quote|1tab>|1.5<space|2spc>Instructions
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-6>>
 
+      <with|par-left|<quote|1tab>|1.6<space|2spc>Local Evaluation State
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-7>>
+
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Judgements>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-7><vspace|0.5fn>
+      <no-break><pageref|auto-8><vspace|0.5fn>
 
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|3<space|2spc>Operational
       Semantics> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-9><vspace|0.5fn>
+      <no-break><pageref|auto-10><vspace|0.5fn>
 
       <with|par-left|<quote|1tab>|3.1<space|2spc>Local Instructions
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-10>>
+      <no-break><pageref|auto-11>>
 
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|4<space|2spc>Resource
       Safety> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
-      <no-break><pageref|auto-11><vspace|0.5fn>
+      <no-break><pageref|auto-12><vspace|0.5fn>
     </associate>
   </collection>
 </auxiliary>
