@@ -16,11 +16,6 @@ Inductive Instr : Set :=
   | MvLoc : LocalVariable → Instr
   | CpLoc : LocalVariable → Instr
   | StLoc : LocalVariable → Instr
-  | BorrowLoc : LocalVariable → Instr
-  | BorrowField : FieldName → Instr
-  | FreezeRef : Instr
-  | ReadRef : Instr
-  | WriteRef : Instr
   | Pop : Instr
   | Pack : StructType → Instr
   | Unpack : Instr

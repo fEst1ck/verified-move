@@ -20,7 +20,4 @@ Inductive NonReferenceType : Set :=
   | structNonReferenceType : StructType -> NonReferenceType
   | primitiveNonReferenceType : PrimitiveType -> NonReferenceType.
 
-Inductive MoveType : Set :=
-  | nonReferenceMoveType : NonReferenceType -> MoveType
-  | mutRefMoveType : NonReferenceType -> MoveType
-  | refMoveType : NonReferenceType -> MoveType.
+Definition MoveType : Set := NonReferenceType.

@@ -17,7 +17,7 @@ Record state := {
 Definition state_contains_t s t : Type := 
    mem_contains_t s.(mem) t + lstack_contains_t s.(stack) t.
 
-Inductive step_local : ∀
+Inductive step_local {defs : ModuleDefinitions} : ∀
 (M : Memory) (S : LocalStack) (i : Instr)
 (M' : Memory) (S' : LocalStack), Type :=
   | step_mvloc : ∀ {x : LocalVariable} {v : RuntimeValue}
@@ -27,44 +27,15 @@ Inductive step_local : ∀
   | step_cploc : ∀ {x : LocalVariable} {u : UnrestrictedValue}
     {M : Memory} {S : LocalStack},
     maps_var_to M x u →
-    step_local M S (CpLoc x) M (val u :: S)
+    step_local M S (CpLoc x) M (unrestrictiveValue u :: S)
   | step_stloc_u : ∀ {x : LocalVariable} {u : UnrestrictedValue}
     {M : Memory} {S : LocalStack},
     maps_var_to M x u →
-    step_local M (val u :: S) (StLoc x) (mem_update_local M x u) S
-  | step_stloc_ref : ∀ {x : LocalVariable} {r : Reference}
-    {M : Memory} {S : LocalStack},
-    maps_var_to M x r →
-    step_local M (ref_val r :: S) (StLoc x) (mem_update_local M x r) S
-  | step_borrow_loc : ∀ {x : LocalVariable} {v : Value}
-    {M : Memory} {S : LocalStack},
-    maps_var_to M x v →
-    step_local M S (BorrowLoc x) M (ref_val {|
-      root := x;
-      access_path := [ ];
-      mutability := mut
-    |} :: S)
-  | step_borrow_field : ∀ {x : LocalVariable} {f : FieldName} {r : Reference}
-    {M : Memory} {S : LocalStack},
-    step_local M (ref_val r :: S) (BorrowField f) M (ref_val (extend_ref r f) :: S)
-  | step_freeze_ref : ∀ {r : Reference}
-    {M : Memory} {S : LocalStack},
-    step_local M (ref_val r :: S) FreezeRef M ((ref_val (freeze_ref r)) :: S)
-  | step_read_ref : ∀ {r : Reference} {u : UnrestrictedValue}
-    {M : Memory} {S : LocalStack},
-    maps_ref_to M r u →
-    step_local M (ref_val r :: S) ReadRef M (val u :: S)
-  | step_write_ref : ∀ {r : Reference} {u : UnrestrictedValue}
-    {M : Memory} {S : LocalStack},
-    maps_ref_to M r u →
-    step_local M (val u :: ref_val r :: S) WriteRef (mem_update_ref M r u) S
+    step_local M (unrestrictiveValue u :: S) (StLoc x) (mem_update_local M x u) S
   | step_pop_u : ∀ {u : UnrestrictedValue}
     {M : Memory} {S : LocalStack},
-    step_local M (val u :: S) Pop M S
-  | step_pop_ref : ∀ {r : Reference}
-    {M : Memory} {S : LocalStack},
-    step_local M (ref_val r :: S) Pop M S
-  | step_pack_r : ∀ {τ : StructType} {n : nat} {lov : list Value} {t : Tag}
+    step_local M (unrestrictiveValue u :: S) Pop M S.
+  (* | step_pack_r : ∀ {τ : StructType} {n : nat} {lov : list Value} {t : Tag}
     {M : Memory} {S : LocalStack},
     maps_struct_kind M τ resourceKind →
     maps_struct_arity M τ n →
@@ -95,13 +66,13 @@ Inductive step_local : ∀
     op_arity op n →
     length lou = n →
     step_local M (map (fun x => (val (unrestrictiveValue x))) lou ++ S) op M (val (opcode_to_op op lou) :: S)
-  .
+  . *)
 
-Definition step_i s0 i s1 : Type := step_local s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
+Definition step_i {defs : ModuleDefinitions} s0 i s1 : Type := @step_local defs s0.(mem) s0.(stack) i s1.(mem) s1.(stack).
 
-Definition step s0 s1 : Type := { i & step_i s0 i s1 }.
+Definition step {defs : ModuleDefinitions} s0 s1 : Type := { i & @step_i defs s0 i s1 }.
 
-Definition instr_of_step {s0 s1} (Hs : step s0 s1) : Instr.
+Definition instr_of_step {defs : ModuleDefinitions} {s0 s1} (Hs : @step defs s0 s1) : Instr.
 Proof.
   unfold step in Hs.
   destruct Hs as [i Hs].
@@ -110,8 +81,8 @@ Defined.
   
 Inductive steps_local : state → state → Prop :=
   | refl : ∀ {s : state}, steps_local s s
-  | trans : ∀ {s0 s1 s2 : state} {i : Instr},
-    step s0 s1 →
+  | trans : ∀ {defs} {s0 s1 s2 : state} {i : Instr},
+    @step defs s0 s1 →
     steps_local s1 s2 →
     steps_local s0 s2
 .

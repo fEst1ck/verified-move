@@ -19,6 +19,7 @@ Definition stack_mem_disjoint_tag m s : Prop :=
   (∀ t, mem_contains_t m t → notT (lstack_contains_t s t)) ∧
   (∀ t, lstack_contains_t s t → notT (mem_contains_t m t)).
 
+(** Two versions of tag-consistent  *)
 Definition tag_uniq s : Set :=
   mem_tag_u s.(mem) ∧
   stack_tag_u s.(stack) ∧
@@ -37,6 +38,7 @@ Ltac inject f := let hn := fresh "f_inj" in
 Ltac inject1 f h := 
   enough (∀ x y, f x = f y → x = y) as h; try (eapply h) || prove_inj.
 
+(** Equivalence of two versions of tag-consistent  *)
 Lemma state_tag_u_implies_mem_tag_u : ∀ s, state_tag_u s → mem_tag_u s.(mem).
 Proof.
   intros s Hs t p1 p2.
@@ -97,7 +99,7 @@ Proof.
 Qed.
 
 Lemma stack_contains_t_cons_u : ∀ (u : UnrestrictedValue) s t,
-  lstack_contains_t (val u :: s) t →
+  lstack_contains_t (unrestrictiveValue u :: s) t →
   lstack_contains_t s t.
 Proof.
   intros.
@@ -105,56 +107,61 @@ Proof.
   assumption.
 Defined.
 
-Proposition step_preserve_stack_tag_u :
+Proposition step_preserve_stack_tag_u {defs} :
 ∀ (s0 s1 : state),
 tag_uniq s0 →
-step s0 s1 →
+@step defs s0 s1 →
 stack_tag_u s1.(stack).
 Proof.
   intros s0 s1 [Hm [Hu Hd]] Hs.
   destruct Hs as [i Hs].
   unfold stack_tag_u in *.
   inversion Hs.
+  (* MvLoc *)
   + destruct v.
-    ++ destruct v.
-      {
-        intros.
-        dependent destruction p1; dependent destruction p2.
-        + apply f_equal.
-          inject (local_mem_contains_tc s0.(mem).(local) x r H4 t).
-          inject1 (local_mem_ct (mem s0) t) f_inj1.
-          apply Hm.
-          {
-            intros.
-            dependent destruction Heq.
-            reflexivity.
-          }
-          {
-            intros.
-            dependent destruction Heq.
-            reflexivity.
-          }
-        + admit.
-        + admit.
-        + specialize Hu with t p1 p2.
-          rewrite Hu.
+    {
+      intros.
+      dependent destruction p1; dependent destruction p2.
+      + apply f_equal.
+        inject (@local_mem_contains_tc s0.(mem).(local) x r H4 t).
+        inject1 (@local_mem_ct (mem s0) t) f_inj1.
+        apply Hm.
+        {
+          intros.
+          dependent destruction Heq.
           reflexivity.
-      }
-      {
-        intros.
-        dependent destruction p1.
-        dependent destruction p2.
-        specialize Hu with t p1 p2.
+        }
+        {
+          intros.
+          dependent destruction Heq.
+          reflexivity.
+        }
+      + exfalso.
+        (* p1 is in local mem of s0 *)
+        (* but p2 is in stack of s0 *)
+        remember (local_mem_ct (local_mem_contains_tc H4 r1)) as pr1.
+        unfold stack_mem_disjoint_tag in Hd.
+        destruct Hd as [Hd1 _].
+        eapply Hd1; eauto.
+      (* symmetric case *)
+      + exfalso.
+        remember (local_mem_ct (local_mem_contains_tc H4 r1)) as pr1.
+        unfold stack_mem_disjoint_tag in Hd.
+        destruct Hd as [Hd1 _].
+        eapply Hd1; eauto.
+      + specialize Hu with t p1 p2.
         rewrite Hu.
         reflexivity.
-      }
-    (* x -> ref *)
-    ++ intros.
+    }
+    {
+      intros.
       dependent destruction p1.
       dependent destruction p2.
       specialize Hu with t p1 p2.
       rewrite Hu.
       reflexivity.
+    }
+  (* CpLoc *)
   + intros.
     dependent destruction p1.
     dependent destruction p2.
@@ -163,16 +170,116 @@ Proof.
     reflexivity.
 Admitted.
 
-Proposition step_preserve_mem_tag_u :
+Proposition step_preserve_mem_tag_u {defs} :
 ∀ (s0 s1 : state),
 tag_uniq s0 →
-step s0 s1 →
+@step defs s0 s1 →
 mem_tag_u s1.(mem).
 Proof.
   intros s0 s1 [H1 [H2 H3]] Hs.
   destruct Hs as [i Hs].
   inversion Hs; subst.
-  + admit.
+  + unfold mem_tag_u.
+    intros t p1 p2.
+    dependent destruction p1; dependent destruction p2.
+    (* p1 p2 both points to local mem *)
+    ++ dependent destruction l; dependent destruction l0.
+      destruct s0 as [mem0 stack0] eqn:Hs0.
+      subst.
+      unfold mem_remove in m, m0.
+      destruct mem0 as [l g] eqn:Hmem0.
+      simpl in m, m0.
+      pose (remove_p3 _ _ _ _ m) as m'.
+      pose (remove_p3 _ _ _ _ m0) as m0'.
+      replace l with (local mem0) in m', m0'.
+      remember (@local_mem_ct mem0 _ (local_mem_contains_tc m' r0)) as pm'.
+      remember (@local_mem_ct mem0 _ (local_mem_contains_tc m0' r2)) as pm0'.
+      assert (pm' = pm0').
+      {
+        simpl in H1.
+        rewrite <- Hmem0 in H1.
+        unfold mem_tag_u in H1.
+        eapply H1.
+      }
+      subst.
+      dependent destruction H0.
+      assert (m = m0) by (apply maps_to_up).
+      rewrite H0.
+      reflexivity.
+      rewrite Hmem0.
+      reflexivity.
+    (* p1 points to local mem p2 points to global mem *)
+    ++ exfalso.
+      destruct s0 as [mem0 stack0] eqn:Hs0.
+      subst.
+      unfold mem_remove in l, g.
+      destruct mem0 as [loc glob] eqn:Hmem0.
+      simpl in l, g.
+      dependent destruction l.
+      pose (remove_p3 _ _ _ _ m) as m'.
+      simpl in H1.
+      rewrite <- Hmem0 in H1.
+      replace loc with (mem0.(local)) in m'.
+      remember (local_mem_ct (local_mem_contains_tc m' r0)) as pm.
+      replace glob with (mem0.(global)) in g.
+      remember (global_mem_ct g) as pg.
+      assert (pm = pg). {
+        unfold mem_tag_u in H1.
+        apply H1.
+      }
+      subst.
+      inversion H0.
+      rewrite Hmem0. reflexivity.
+      rewrite Hmem0. reflexivity.
+    (* p1 points to global mem p2 points to local mem *)
+    ++ exfalso.
+      destruct s0 as [mem0 stack0] eqn:Hs0.
+      subst.
+      unfold mem_remove in l, g.
+      destruct mem0 as [loc glob] eqn:Hmem0.
+      simpl in l, g.
+      dependent destruction l.
+      pose (remove_p3 _ _ _ _ m) as m'.
+      simpl in H1.
+      rewrite <- Hmem0 in H1.
+      replace loc with (mem0.(local)) in m'.
+      remember (local_mem_ct (local_mem_contains_tc m' r0)) as pm.
+      replace glob with (mem0.(global)) in g.
+      remember (global_mem_ct g) as pg.
+      assert (pm = pg). {
+        unfold mem_tag_u in H1.
+        apply H1.
+      }
+      subst.
+      inversion H0.
+      rewrite Hmem0. reflexivity.
+      rewrite Hmem0. reflexivity.
+    (* p1 p2 both points to global mem *)
+    ++ destruct s0 as [mem0 stack0] eqn:Hs0.
+      Set Printing Implicit.
+      unfold mem_remove in *.
+      Set Printing Implicit.
+      destruct mem0 as [loc glob] eqn:Hmem0.
+      simpl in *.
+      Set Printing Implicit.
+      remember (@global_mem_ct {| local := loc; global := glob |} _ g) as pg.
+      remember (@global_mem_ct {| local := loc; global := glob |} _ g0) as pg0.
+      assert (pg = pg0).
+      {
+        apply H1.
+      }
+      rewrite Heqpg in H0.
+      rewrite Heqpg0 in H0.
+      Set Printing Implicit.
+      assert (∀ m t H1 H2, @global_mem_ct m t H1 = @global_mem_ct m t H2 → H1 = H2). {
+        intros.
+        dependent destruction H8.
+        reflexivity.
+      }
+      apply H4 in H0.
+      rewrite H0.
+      reflexivity.
+  (* CpLoc *)
   + unfold mem_tag_u in *.
     destruct H3.
     assumption.

@@ -23,4 +23,5 @@ Record StructID : Set := {
   name : StructName;
 }.
 
-Definition GlobalResourceID := StructID.
+Open Scope type_scope.
+Definition GlobalResourceID := AccountAddress * StructID.
