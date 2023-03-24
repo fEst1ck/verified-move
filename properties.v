@@ -27,26 +27,26 @@ Definition tag_uniq s : Set :=
 
 Definition state_tag_u (s : state) : Prop := ∀ t (p1 p2: state_contains_t s t), p1 = p2.
 
-Lemma mem_tag_u_p1 {M} : ∀ {x y r1 r2 t}, mem_tag_u M →
-maps_var_to M x (resourceValue r1) →
+Lemma mem_tag_u_p1 {M} : ∀ {x y} {r1 r2 : Resource} {t}, mem_tag_u M →
+maps_var_to M x r1 →
 resource_contains_t r1 t →
-maps_var_to M y (resourceValue r2) →
+maps_var_to M y r2 →
 resource_contains_t r2 t →
 x = y /\ r1 = r2.
 Proof.
-  intros.
-  remember (local_mem_ct (local_mem_contains_tc H0 H1)) as p1.
-  remember (local_mem_ct (local_mem_contains_tc H2 H3)) as p2.
-  pose (H _ p1 p2).
-  rewrite Heqp1, Heqp2 in e.
+  intros x y r1 r2 t Hm Hx Hr1 Hy Hr2.
+  remember (local_mem_ct (local_mem_contains_tc Hx Hr1)) as p1 eqn:Hp1.
+  remember (local_mem_ct (local_mem_contains_tc Hy Hr2)) as p2 eqn:Hp2.
+  pose (Hm _ p1 p2).
+  rewrite Hp1, Hp2 in e.
   dependent destruction e.
-  auto.
+  easy.
 Qed.
 
 Definition inject {A B} (f : A -> B) := (∀ x y, f x = f y -> x = y).
 
 Ltac prove_inj := let h := fresh "Heq" in let x := fresh "x" in let y := fresh "y" in
-  intros x y h; injection h; auto.
+  intros x y h; dependent destruction h; auto.
 
 Ltac inject f := let hn := fresh "f_inj" in
   enough (∀ x y, f x = f y → x = y) as f_inj; try (eapply f_inj) || prove_inj.
@@ -142,16 +142,6 @@ Proof.
         inject (@local_mem_contains_tc s0.(mem).(local) x r H4 t).
         inject1 (@local_mem_ct (mem s0) t) f_inj1.
         apply Hm.
-        {
-          intros.
-          dependent destruction Heq.
-          reflexivity.
-        }
-        {
-          intros.
-          dependent destruction Heq.
-          reflexivity.
-        }
       + exfalso.
         (* p1 is in local mem of s0 *)
         (* but p2 is in stack of s0 *)
@@ -198,11 +188,12 @@ Proof.
   + unfold mem_tag_u.
     intros t p1 p2.
     dependent destruction p1; dependent destruction p2.
-    (* p1 p2 both points to local mem *)
-    ++ dependent destruction l; dependent destruction l0.
+    ++ 
+      (* p1 p2 both points to local mem of s1 which is M/x *)
+      (* so p1 p2 both points to some y in M *)
+      (* so p1 = p2 by tag consistency of s0 *)
+      dependent destruction l; dependent destruction l0.
       destruct s0 as [mem0 stack0] eqn:Hs0.
-      subst.
-      unfold mem_remove in m, m0.
       destruct mem0 as [l g] eqn:Hmem0.
       simpl in m, m0.
       pose (remove_p3 _ _ _ _ m) as m'.
@@ -214,8 +205,7 @@ Proof.
       {
         simpl in H1.
         rewrite <- Hmem0 in H1.
-        unfold mem_tag_u in H1.
-        eapply H1.
+        apply H1.
       }
       subst.
       dependent destruction H0.
@@ -239,10 +229,7 @@ Proof.
       remember (local_mem_ct (local_mem_contains_tc m' r0)) as pm.
       replace glob with (mem0.(global)) in g.
       remember (global_mem_ct g) as pg.
-      assert (pm = pg). {
-        unfold mem_tag_u in H1.
-        apply H1.
-      }
+      assert (pm = pg) by (apply H1).
       subst.
       inversion H0.
       rewrite Hmem0. reflexivity.
@@ -250,8 +237,6 @@ Proof.
     (* p1 points to global mem p2 points to local mem *)
     ++ exfalso.
       destruct s0 as [mem0 stack0] eqn:Hs0.
-      subst.
-      unfold mem_remove in l, g.
       destruct mem0 as [loc glob] eqn:Hmem0.
       simpl in l, g.
       dependent destruction l.
@@ -262,39 +247,21 @@ Proof.
       remember (local_mem_ct (local_mem_contains_tc m' r0)) as pm.
       replace glob with (mem0.(global)) in g.
       remember (global_mem_ct g) as pg.
-      assert (pm = pg). {
-        unfold mem_tag_u in H1.
-        apply H1.
-      }
+      assert (pm = pg) by (apply H1).
       subst.
       inversion H0.
       rewrite Hmem0. reflexivity.
       rewrite Hmem0. reflexivity.
     (* p1 p2 both points to global mem *)
     ++ destruct s0 as [mem0 stack0] eqn:Hs0.
-      Set Printing Implicit.
-      unfold mem_remove in *.
-      Set Printing Implicit.
       destruct mem0 as [loc glob] eqn:Hmem0.
       simpl in *.
-      Set Printing Implicit.
       remember (@global_mem_ct {| local := loc; global := glob |} _ g) as pg.
       remember (@global_mem_ct {| local := loc; global := glob |} _ g0) as pg0.
-      assert (pg = pg0).
-      {
-        apply H1.
-      }
-      rewrite Heqpg in H0.
-      rewrite Heqpg0 in H0.
-      Set Printing Implicit.
-      assert (∀ m t H1 H2, @global_mem_ct m t H1 = @global_mem_ct m t H2 → H1 = H2). {
-        intros.
-        dependent destruction H8.
-        reflexivity.
-      }
-      apply H4 in H0.
-      rewrite H0.
-      reflexivity.
+      assert (pg = pg0) by (apply H1).
+      apply f_equal.
+      inject (@global_mem_ct {| local := loc; global := glob |} t).
+      auto.
   (* CpLoc *)
   + unfold mem_tag_u in *.
     destruct H3.
@@ -317,7 +284,6 @@ Proof.
     (* in mem implies not in stack *)
     ++ intros t Ht Hc.
       pose proof (mem_contains_t_remove_p3 _ _ _ Ht) as Ht'.
-      unfold stack_mem_disjoint_tag in Hd.
       destruct Hd as [Hd1 Hd2].
       destruct v.
       (* moved val is resource *)
