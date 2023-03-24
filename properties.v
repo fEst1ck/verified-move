@@ -368,7 +368,19 @@ Proof.
       {
         dependent destruction Hc.
         {
-            admit.
+          remember (mem s0) as M.
+          assert ({y & { r & (y <> x) * maps_var_to M y (resourceValue r) * (resource_contains_t r t) }}).
+          {
+            rewrite local_mem_remove_ in l.
+            inversion l. subst.
+            apply remove_p2_' in H0.
+            destruct H0.
+            exists x0. exists r1.
+            split; auto.
+          }
+          destruct H0 as [y [r1 [[foo bar] baz]]].
+          apply foo.
+          eapply mem_tag_u_p1; eauto.
         }
         (* Hc points to global memory, not possible since t is moved from local memory *)
         {
