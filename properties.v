@@ -27,6 +27,22 @@ Definition tag_uniq s : Set :=
 
 Definition state_tag_u (s : state) : Prop := ∀ t (p1 p2: state_contains_t s t), p1 = p2.
 
+Lemma mem_tag_u_p1 {M} : ∀ {x y r1 r2 t}, mem_tag_u M →
+maps_var_to M x (resourceValue r1) →
+resource_contains_t r1 t →
+maps_var_to M y (resourceValue r2) →
+resource_contains_t r2 t →
+x = y /\ r1 = r2.
+Proof.
+  intros.
+  remember (local_mem_ct (local_mem_contains_tc H0 H1)) as p1.
+  remember (local_mem_ct (local_mem_contains_tc H2 H3)) as p2.
+  pose (H _ p1 p2).
+  rewrite Heqp1, Heqp2 in e.
+  dependent destruction e.
+  auto.
+Qed.
+
 Definition inject {A B} (f : A -> B) := (∀ x y, f x = f y -> x = y).
 
 Ltac prove_inj := let h := fresh "Heq" in let x := fresh "x" in let y := fresh "y" in
@@ -286,21 +302,85 @@ Proof.
 Admitted.
 
 
-Proposition step_preserve_stack_mem_disjoint :
+Proposition step_preserve_stack_mem_disjoint {defs} :
 ∀ (s0 s1 : state),
 tag_uniq s0 →
-step s0 s1 →
+@step defs s0 s1 →
 stack_mem_disjoint_tag s1.(mem) s1.(stack).
 Proof.
-  intros s0 s1 [_ [_ Hs0]] Hs1.
+  intros s0 s1 [Hm [Hs Hd]] Hs1.
   destruct Hs1 as [i Hs1].
   inversion Hs1; subst.
-  + admit.
+  (* MvLoc *)
+  + unfold stack_mem_disjoint_tag.
+    split.
+    (* in mem implies not in stack *)
+    ++ intros t Ht Hc.
+      pose proof (mem_contains_t_remove_p3 _ _ _ Ht) as Ht'.
+      unfold stack_mem_disjoint_tag in Hd.
+      destruct Hd as [Hd1 Hd2].
+      destruct v.
+      (* moved val is resource *)
+      {
+        dependent destruction Hc.
+        {
+          remember (mem s0) as M.
+          inversion Ht.
+          {
+            (* t in M(x) *)
+            (* Ht : t in M/x *)
+            (* so t in M(y) where y <> x  *)
+            (* we thus have two different path to t in M,
+              which contradicts the memory uniqueness of M
+            *)
+            assert ({y & { r & (y <> x) * maps_var_to M y (resourceValue r) * (resource_contains_t r t) }}).
+            {
+              rewrite local_mem_remove_ in H0.
+              inversion H0. subst.
+              apply remove_p2_' in H5.
+              destruct H5.
+              exists x0. exists r0.
+              split; auto.
+            }
+            destruct H5 as [y [r0 [[foo bar] baz]]].
+            apply foo.
+            eapply mem_tag_u_p1; eauto.
+          }
+          {
+            (* t in M(x) *)
+            (* so t is in local memory of M *)
+            apply mem_contains_t_remove_p3 in Ht.
+            assert (local_mem_contains_t (local M) t).
+            {
+              econstructor; eauto.
+            }
+            apply global_mem_contains_t_remove_p3 in H0.
+            remember (global_mem_ct H0) as p1.
+            remember (local_mem_ct H5) as p2.
+            pose (Hm _ p1 p2) as Hc.
+            rewrite Heqp1 in Hc.
+            rewrite Heqp2 in Hc.
+            inversion Hc.
+          }
+        }
+        {
+          apply mem_contains_t_remove_p3 in Ht.
+          apply Hd1 in Ht.
+          contradiction.
+        }
+      }
+      (* moved val is unrestricted *)
+      {
+        apply stack_contains_t_cons_u in Hc.
+        eapply Hd1; eauto.
+      }
+    (* in stack implies not in mem *)
+    ++ admit.
   + unfold stack_mem_disjoint_tag in *.
-    destruct Hs0 as [Hs0 H5].
+    destruct Hd as [Hd H5].
     split.
     ++ intros t t_in_s0_mem.
-      apply Hs0 in t_in_s0_mem.
+      apply Hd in t_in_s0_mem.
       intro contra.
       apply stack_contains_t_cons_u in contra.
       contradiction.
@@ -309,37 +389,37 @@ Proof.
       auto.
 Admitted.
 
-Proposition step_preserve_tag_u :
+Proposition step_preserve_tag_u {defs}:
 ∀ (s0 s1 : state),
 tag_uniq s0 →
-step s0 s1 →
+@step defs s0 s1 →
 tag_uniq s1.
 Proof.
   intros.
   split.
-  + apply step_preserve_mem_tag_u with (s0:=s0); assumption.
+  + apply (@step_preserve_mem_tag_u defs) with (s0:=s0); assumption.
   + split.
-    ++ apply step_preserve_stack_tag_u with (s0:=s0); assumption.
-    ++ apply step_preserve_stack_mem_disjoint with (s0:=s0); assumption.
+    ++ apply (@step_preserve_stack_tag_u defs) with (s0:=s0); assumption.
+    ++ apply (@step_preserve_stack_mem_disjoint defs) with (s0:=s0); assumption.
 Qed.
 
-Definition conserve_t {s0} {s1} (_ : step s0 s1) : Type :=
+Definition conserve_t {defs} {s0} {s1} (_ : @step defs s0 s1) : Type :=
   (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
   (∀ t, state_contains_t s1 t → state_contains_t s0 t).
 
-Definition introduce_t {s0} {s1} (_ : step s0 s1) t : Type :=
+Definition introduce_t {defs} {s0} {s1} (_ : @step defs s0 s1) t : Type :=
   (∀ t, state_contains_t s0 t → state_contains_t s1 t) *
   notT (state_contains_t s0 t) *
   state_contains_t s1 t *
   (∀ t', state_contains_t s1 t' * notT (state_contains_t s0 t') → t' = t).
 
-Definition elim_t {s0} {s1} (_ : step s0 s1) t : Type :=
+Definition elim_t {defs} {s0} {s1} (_ : @step defs s0 s1) t : Type :=
   (∀ t, state_contains_t s1 t → state_contains_t s0 t) *
   notT (state_contains_t s1 t) *
   state_contains_t s0 t *
   (∀ t', state_contains_t s0 t' * notT (state_contains_t s1 t') → t' = t).
 
-Lemma conserve_t_not_intro : ∀ {s0 s1} (Hs : step s0 s1),
+Lemma conserve_t_not_intro {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1),
   conserve_t Hs → ∀ t, notT (introduce_t Hs t).
 Proof.
   intros s0 s1 Hs Hc t contra.
@@ -350,7 +430,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma conserve_t_not_elim : ∀ {s0 s1} (Hs : step s0 s1),
+Lemma conserve_t_not_elim {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1),
   conserve_t Hs → ∀ t, notT (elim_t Hs t).
 Proof.
   intros s0 s1 Hs Hc t contra.
@@ -361,7 +441,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma introduce_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
+Lemma introduce_t_not_conserved {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1) {t},
 introduce_t Hs t → notT (conserve_t Hs).
 Proof.
   intros s0 s1 Hs t Hi Hc.
@@ -372,7 +452,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma introduce_t_not_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t},
+Lemma introduce_t_not_elim_t {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1) {t},
 introduce_t Hs t → ∀ t, notT (elim_t Hs t).
 Proof.
   intros s0 s1 Hs t1 Hi t2 He.
@@ -382,7 +462,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma elim_t_not_conserved : ∀ {s0 s1} (Hs : step s0 s1) {t},
+Lemma elim_t_not_conserved {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1) {t},
 elim_t Hs t → notT (conserve_t Hs).
 Proof.
   intros s0 s1 Hs t He Hc.
@@ -392,7 +472,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma elim_t_not_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t},
+Lemma elim_t_not_elim_t {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1) {t},
 elim_t Hs t → ∀ t, notT (introduce_t Hs t).
 Proof.
   intros s0 s1 Hs t1 He t2 Hi.
@@ -402,7 +482,7 @@ Proof.
   contradiction.
 Qed.
 
-Theorem local_resource_safety : ∀ {s0 s1} (Hs : step s0 s1),
+Theorem local_resource_safety {defs} : ∀ {s0 s1} (Hs : @step defs s0 s1),
 conserve_t Hs +
 { t & introduce_t Hs t} +
 { t & elim_t Hs t}.
@@ -494,16 +574,16 @@ Proof.
 Admitted.
 
 Open Scope type_scope.
-Theorem only_pack_intro_r : ∀ {s0 s1} (Hs : step s0 s1) {t}
+(* Theorem only_pack_intro_r : ∀ {defs} {s0 s1} (Hs : @step defs s0 s1) {t}
 (Hi : introduce_t Hs t),
 { τ & instr_of_step Hs = (Pack τ) } +
 {r & { S & (val (resourceValue r) :: S = s1.(stack)) * (tag_of r = t) }}.
 Proof.
 Admitted.
 
-Theorem only_unpack_elim_t : ∀ {s0 s1} (Hs : step s0 s1) {t}
+Theorem only_unpack_elim_t : ∀ {defs} {s0 s1} (Hs : @step defs s0 s1) {t}
 (Hi : elim_t Hs t),
 (instr_of_step Hs = Unpack) +
 { r & { S & (val (resourceValue r) :: S = s0.(stack)) * (tag_of r = t) }}.
 Proof.
-Admitted.
+Admitted. *)

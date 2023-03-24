@@ -92,7 +92,41 @@ Proof.
   contradiction.
 Qed.
 
+Lemma remove_p2_ : ∀ {Y : Set} (M : LocalVariable ⇀ Y) x y v,
+¬ x = y →
+maps_to (remove M x) y v →
+maps_to M y v.
+Proof.
+Admitted.
+
+Lemma remove_p2_' : ∀ {Y : Set} (M : LocalVariable ⇀ Y) x y v,
+maps_to (remove M x) y v →
+maps_to M y v * ¬ x = y.
+Proof.
+  intros Y M x y v H.
+  compute in H.
+  destruct (var_dec_eq y x).
+  + inversion H.
+  + split.
+    ++ exact H.
+    ++ auto. 
+Qed.
+
 Lemma mem_remove_p2 : ∀ M x y v, ¬ x = y →  (maps_var_to (mem_remove M x) y v) = (maps_var_to M y v).
+Proof.
+  intros M x y v H.
+  destruct M as [local global].
+  unfold mem_remove.
+  unfold maps_var_to.
+  simpl.
+  unfold maps_to.
+  unfold remove.
+  destruct (eq_dec y x); auto.
+  rewrite e in H.
+  contradiction.
+Qed.
+
+Lemma mem_contains_t_remove_p2 : ∀ M x y v, ¬ x = y →  (maps_var_to (mem_remove M x) y v) = (maps_var_to M y v).
 Proof.
   intros M x y v H.
   destruct M as [local global].
@@ -126,6 +160,52 @@ Proof.
     rewrite Hc in H.
     eapply mem_remove_p1.
     exact H.
+Qed.
+
+Lemma mem_remove_global_const : ∀ {m} {x},
+global (mem_remove m x) = global m.
+Proof.
+  intros [L G] x.
+  compute.
+  reflexivity.
+Qed.
+
+Lemma local_mem_remove_ : ∀ {M} {x},
+local (mem_remove M x) = remove M.(local) x.
+Proof.
+  intros [L G] x.
+  compute.
+  reflexivity.
+Qed.
+
+Lemma global_mem_contains_t_remove_p3 : ∀ m x t,
+global_mem_contains_t (global (mem_remove m x)) t →
+global_mem_contains_t (global m) t.
+Proof.
+  intros m x t H.
+  inversion H.
+  rewrite mem_remove_global_const in H0.
+  econstructor; eauto.
+Qed.
+
+Lemma mem_contains_t_remove_p3 : ∀ m x t,
+mem_contains_t (mem_remove m x) t →
+mem_contains_t m t.
+Proof.
+  intros m x t H.
+  destruct m.
+  unfold mem_remove in H.
+  dependent destruction H.
+  + simpl in l.
+    dependent destruction l.
+    apply remove_p3 in m.
+    constructor.
+    simpl.
+    econstructor; eauto.
+  + dependent destruction g.
+    simpl in m.
+    apply global_mem_ct.
+    econstructor; eauto.
 Qed.
 
 Definition mem_update_local (M : Memory) (x : LocalVariable) (v : RuntimeValue) : Memory.
