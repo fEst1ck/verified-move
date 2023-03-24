@@ -55,6 +55,32 @@ Ltac inject1 f h :=
   enough (∀ x y, f x = f y → x = y) as h; try (eapply h) || prove_inj.
 
 (** Equivalence of two versions of tag-consistent  *)
+Lemma mem_tag_u_implies_mem_disjoint1 : ∀ {m},
+mem_tag_u m → (∀ {t},
+global_mem_contains_t m.(global) t →
+notT (local_mem_contains_t m.(local) t)).
+Proof.
+  intros m Hm t Ht Hc.
+  remember (local_mem_ct Hc) as p1.
+  remember (global_mem_ct Ht) as p2.
+  pose (Hm _ p1 p2).
+  subst.
+  inversion e.
+Qed.
+
+Lemma mem_tag_u_implies_mem_disjoint2 : ∀ {m},
+mem_tag_u m → (∀ {t},
+local_mem_contains_t m.(local) t →
+notT (global_mem_contains_t m.(global) t)).
+Proof.
+  intros m Hm t Hc Ht.
+  remember (local_mem_ct Hc) as p1.
+  remember (global_mem_ct Ht) as p2.
+  pose (Hm _ p1 p2).
+  subst.
+  inversion e.
+Qed.
+
 Lemma state_tag_u_implies_mem_tag_u : ∀ s, state_tag_u s → mem_tag_u s.(mem).
 Proof.
   intros s Hs t p1 p2.
@@ -321,12 +347,7 @@ Proof.
               econstructor; eauto.
             }
             apply global_mem_contains_t_remove_p3 in H0.
-            remember (global_mem_ct H0) as p1.
-            remember (local_mem_ct H5) as p2.
-            pose (Hm _ p1 p2) as Hc.
-            rewrite Heqp1 in Hc.
-            rewrite Heqp2 in Hc.
-            inversion Hc.
+            eapply mem_tag_u_implies_mem_disjoint1; eauto.
           }
         }
         {
@@ -341,7 +362,27 @@ Proof.
         eapply Hd1; eauto.
       }
     (* in stack implies not in mem *)
-    ++ admit.
+    ++ intros t Ht Hc.
+      dependent destruction Ht.
+      (* t on top of stack *)
+      {
+        dependent destruction Hc.
+        {
+            admit.
+        }
+        (* Hc points to global memory, not possible since t is moved from local memory *)
+        {
+          apply global_mem_contains_t_remove_p3 in g.
+          eapply mem_tag_u_implies_mem_disjoint1; eauto.
+          econstructor; eauto.
+        }
+      }
+      (* t on cdr of stack *)
+      {
+       apply mem_contains_t_remove_p3 in Hc.
+       destruct Hd as [Hd _].
+       eapply Hd; eauto. 
+      }
   + unfold stack_mem_disjoint_tag in *.
     destruct Hd as [Hd H5].
     split.
