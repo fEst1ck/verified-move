@@ -28,10 +28,10 @@ Inductive step_local {defs : ModuleDefinitions} : ∀
     {M : Memory} {S : LocalStack},
     maps_var_to M x u →
     step_local M S (CpLoc x) M (unrestrictiveValue u :: S)
-  | step_stloc_u : ∀ {x : LocalVariable} {u : UnrestrictedValue}
+  | step_stloc_u : ∀ {x : LocalVariable} {u1 u2 : UnrestrictedValue}
     {M : Memory} {S : LocalStack},
-    maps_var_to M x u →
-    step_local M (unrestrictiveValue u :: S) (StLoc x) (mem_update_local M x u) S
+    maps_var_to M x u1 →
+    step_local M (unrestrictiveValue u2 :: S) (StLoc x) (mem_update_local M x u2) S
   | step_pop_u : ∀ {u : UnrestrictedValue}
     {M : Memory} {S : LocalStack},
     step_local M (unrestrictiveValue u :: S) Pop M S.
