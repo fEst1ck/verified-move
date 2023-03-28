@@ -193,6 +193,8 @@ Proof.
       rewrite Hu.
       reflexivity.
     }
+  (* StLoc *)
+  + admit.
   (* CpLoc *)
   + intros.
     dependent destruction p1.
@@ -288,6 +290,8 @@ Proof.
       apply f_equal.
       inject (@global_mem_ct {| local := loc; global := glob |} t).
       auto.
+  (* StLoc *)
+  + admit.
   (* CpLoc *)
   + unfold mem_tag_u in *.
     destruct H3.
@@ -395,6 +399,9 @@ Proof.
        destruct Hd as [Hd _].
        eapply Hd; eauto. 
       }
+  (* StLoc *)
+  + admit.
+  (* CpLoc *)
   + unfold stack_mem_disjoint_tag in *.
     destruct Hd as [Hd H5].
     split.
@@ -509,35 +516,15 @@ Proof.
   intros s0 s1 Hs.
   destruct Hs as [i Hs].
   inversion Hs; subst.
-  + admit.
+  (* MvLoc *)
   + left. left.
     split.
+    (* resource not dropped *)
     ++ intros t t_in_s0.
-      destruct t_in_s0.
-      {
-        left.
-        rewrite H in m.
-        assumption.
-      }
-      {
-        right.
-        rewrite <- H3.
-        apply lstackt_cdr.
-        assumption.
-      }
-    ++ intros t t_in_s1.
-      destruct t_in_s1.
-      {
-        left.
-        rewrite H.
-        assumption.
-      }
-      {
-        rewrite <- H3 in l.
-        apply stack_contains_t_cons_u in l.
-        right.
-        assumption.
-      }
+      intros.
+      admit.
+    (* resource not created *)
+    ++ admit.
   (* StLoc *)
   + left. left. (* prove resource conservation *)
     split.
@@ -589,6 +576,36 @@ Proof.
         apply lstackt_cdr.
         assumption.
       }
+  (* CpLoc *)
+  + left. left.
+    split.
+    ++ intros t t_in_s0.
+      destruct t_in_s0.
+      {
+        left.
+        rewrite H in m.
+        assumption.
+      }
+      {
+        right.
+        rewrite <- H3.
+        apply lstackt_cdr.
+        assumption.
+      }
+    ++ intros t t_in_s1.
+      destruct t_in_s1.
+      {
+        left.
+        rewrite H.
+        assumption.
+      }
+      {
+        rewrite <- H3 in l.
+        apply stack_contains_t_cons_u in l.
+        right.
+        assumption.
+      }
+
   + 
 Admitted.
 
