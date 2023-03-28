@@ -538,42 +538,91 @@ Proof.
         + left.
           apply local_mem_ct.
           rewrite <- H1.
-          apply mem_update_local_u1.
-          assumption.
+          dependent destruction l.
+          erewrite <- update_p2 in m0.
+          rewrite mem_update_local_e1.
+          econstructor; eauto.
+          intros Hc.
+          rewrite Hc in H3.
+          unfold maps_var_to in H3.
+          unfold maps_to in *.
+          rewrite H3 in m0.
+          inversion m0.
         (* t in global memory *)
         + left.
           apply global_mem_ct.
           rewrite <- H1.
-          apply mem_update_local_global_const1.
+          rewrite mem_update_local_e2.
           assumption.
       }
       (* t in stack of s0 *)
       {
-        right.
         rewrite <- H in l.
-        apply stack_contains_t_cons_u in l.
-        assumption.
+        destruct v.
+        (* v is resource *)
+        {
+          dependent destruction l.
+          (* t on top of stack *)
+          {
+            left.
+            constructor.
+            rewrite <- H1.
+            econstructor.
+            rewrite mem_update_local_e1.
+            apply update_p3.
+            assumption.
+          }
+          (* t on rest of stack *)
+          {
+            right.
+            assumption.
+          }
+        }
+        (* v unrestriced *)
+        {
+          right.
+          apply stack_contains_t_cons_u in l.
+          assumption.
+        }
       }
     (* tag s1 ⊆ tag s0 *)
     ++ intros t t_in_s1.
       destruct t_in_s1.
       {
         destruct m.
-        + left.
-          apply local_mem_ct.
-          rewrite <- H1 in l.
-          apply mem_update_local_u2 in l.
-          assumption.
+        (* t in local of s1 *)
+        + dependent destruction l.
+          rewrite <- H1 in m0.
+          rewrite mem_update_local_e1 in m0.
+          destruct (var_dec_eq x0 x).
+          {
+            compute in m0.
+            destruct (var_dec_eq x0 x). 2:{ contradiction. }
+            inversion m0.
+            subst.
+            right.
+            rewrite <- H.
+            constructor.
+            assumption.
+          }
+          {
+           left.
+           constructor.
+           econstructor.
+           rewrite update_p2 in m0; eauto.
+           assumption.
+          }
+        (* t in global of s1 *)
         + left.
           apply global_mem_ct.
           rewrite <- H1 in g.
-          apply mem_update_local_global_const2 in g.
+          rewrite mem_update_local_e2 in g.
           assumption.
       }
       {
         right.
         rewrite <- H.
-        apply lstackt_cdr.
+        constructor.
         assumption.
       }
   (* CpLoc *)
@@ -605,7 +654,6 @@ Proof.
         right.
         assumption.
       }
-
   + 
 Admitted.
 
