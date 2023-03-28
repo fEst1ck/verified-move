@@ -160,6 +160,15 @@ Proof.
     exact H.
 Qed.
 
+Lemma update_p3 : ∀ {Y : Set} (M : LocalVariable ⇀ Y) x v, maps_to (update M x v) x v.
+Proof.
+  intros Y M x v.
+  compute.
+  destruct (var_dec_eq x x); auto.
+  destruct n.
+  reflexivity.
+Qed.
+
 Lemma mem_remove_p3 : ∀ M x y v, (maps_var_to (mem_remove M x) y v) → maps_var_to M y v.
 Proof.
   intros M x y v H.
@@ -232,22 +241,12 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma mem_update_local_global_const1 {M} {x} {v} :
-∀ t, global_mem_contains_t M.(global) t → global_mem_contains_t (mem_update_local M x v).(global) t.
-Admitted.
-
-Lemma mem_update_local_global_const2 {M} {x} {v} :
-∀ t, global_mem_contains_t (mem_update_local M x v).(global) t →
-global_mem_contains_t M.(global) t.
-Admitted.
-
-Lemma mem_update_local_u1 {M} {x} {u : UnrestrictedValue} :
-∀ t, local_mem_contains_t M.(local) t → local_mem_contains_t (mem_update_local M x u).(local) t.
-Admitted.
-
-Lemma mem_update_local_u2 {M} {x} {u : UnrestrictedValue} :
-∀ t, local_mem_contains_t (mem_update_local M x u).(local) t → local_mem_contains_t M.(local) t.
-Admitted.
+Lemma mem_update_local_e2 {m x v} : global (mem_update_local m x v) = global m.
+Proof.
+  destruct m.
+  simpl.
+  reflexivity.
+Qed.
 
 Inductive maps_struct_kind : ModuleDefinitions → StructType → Kind → Prop :=.
 
