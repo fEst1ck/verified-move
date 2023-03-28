@@ -92,6 +92,15 @@ Proof.
   contradiction.
 Qed.
 
+Lemma update_p2 : ∀ {Y : Set} (M : LocalVariable ⇀ Y) x y v1 v2, ¬ x = y →  (maps_to (update M x v1) y v2) = (maps_to M y v2).
+Proof.
+  intros Y M x y v1 b2 H.
+  compute.
+  destruct (var_dec_eq y x); auto.
+  rewrite e in H.
+  contradiction.
+Qed.
+
 Lemma remove_p2_ : ∀ {Y : Set} (M : LocalVariable ⇀ Y) x y v,
 ¬ x = y →
 maps_to (remove M x) y v →
@@ -209,7 +218,19 @@ Proof.
 Qed.
 
 Definition mem_update_local (M : Memory) (x : LocalVariable) (v : RuntimeValue) : Memory.
-Admitted.
+Proof.
+  destruct M as [L G].
+  constructor.
+  + refine (update L x v).
+  + refine G.
+Defined.
+
+Lemma mem_update_local_e1 {m x v} : local (mem_update_local m x v) = update m.(local) x v.
+Proof.
+  destruct m.
+  simpl.
+  reflexivity.
+Qed.
 
 Lemma mem_update_local_global_const1 {M} {x} {v} :
 ∀ t, global_mem_contains_t M.(global) t → global_mem_contains_t (mem_update_local M x v).(global) t.
